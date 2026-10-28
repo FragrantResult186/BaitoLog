@@ -1,9 +1,7 @@
-# 改行コードをそろえる（Windows の Eclipse / IntelliJ どちらで保存しても差分が出ないように）
+# 改行コードをそろえる（誰が保存しても差分が出ないように）
 * text=auto
 
-/mvnw text eol=lf
-*.cmd text eol=crlf
-
+*.jar binary
 *.png binary
 *.jpg binary
 *.xlsx binary

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration>
+<!-- 上記はEclipseの警告を消すための記述です。 -->
+
+<!--
+	DBの接続設定（Dao.java が jdbc/baitolog を使う）
+	・DBファイルは各自のPCのホームフォルダ（C:\Users\自分\baitolog.mv.db）に作られる
+	・AUTO_SERVER=TRUE なので、H2 を先に起動しておく必要はない
+	  （H2コンソールで中を見るときも、同じURLでつなげる）
+-->
+<Context reloadable="true">
+	<Resource
+		name="jdbc/baitolog"
+		auth="Container"
+		type="javax.sql.DataSource"
+		driverClassName="org.h2.Driver"
+		url="jdbc:h2:~/baitolog;AUTO_SERVER=TRUE"
+		username="sa"
+		password=""
+	/>
+</Context>

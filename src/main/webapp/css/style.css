@@ -1,0 +1,6 @@
+@charset "UTF-8";
+
+/* BaitoLog 共通スタイル（Bootstrap に足りない分だけ書く） */
+body {
+	font-family: "Meiryo", "Hiragino Sans", sans-serif;
+}
