@@ -1,0 +1,16 @@
+# エディタ共通設定（IntelliJ は標準対応。Eclipse は「EditorConfig」プラグインを入れると効く）
+root = true
+
+[*]
+charset = utf-8
+# 改行コードは Git（.gitattributes）にまかせる
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{html,css,js,json,yml,yaml}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false

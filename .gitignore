@@ -1,0 +1,40 @@
+### Maven ###
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### Eclipse（Pleiades）###
+# .project / .classpath / .settings は m2e がPCごとに作るのでコミットしない
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+.metadata/
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+out/
+
+### VS Code ###
+.vscode/
+
+### BaitoLog ###
+# H2 のDBファイル（各自のPCで作られる）
+data/
+*.mv.db
+*.trace.db
+# 個人用の設定（パスワードなど）はここに書き、コミットしない
+src/main/resources/application-local.properties
+
+### OS ###
+Thumbs.db
+Desktop.ini
+.DS_Store
