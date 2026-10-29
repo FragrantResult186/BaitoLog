@@ -15,22 +15,24 @@ import bean.SchoolClass;
 public class SchoolClassDao extends Dao {
 
 	/**
-	 * filterメソッド 学校のクラスを全部取得する（セレクトボックス用）
+	 * filterメソッド 学校のクラスを全部取得する
 	 *
-	 * @param school:School
-	 *            学校
-	 * @return クラスのリスト（クラス名順）:List<SchoolClass>
+	 * @param school:School 学校
+	 * @return クラスのリスト:List<SchoolClass>
 	 * @throws Exception
 	 */
 	public List<SchoolClass> filter(School school) throws Exception {
 		List<SchoolClass> list = new ArrayList<>();
 
 		try (Connection connection = getConnection();
-				PreparedStatement statement = connection.prepareStatement(
-						"select * from SCHOOL_CLASS where SCHOOL_ID = ? order by NAME")) {
+			 PreparedStatement statement = connection.prepareStatement(
+					 "select * from SCHOOL_CLASS where SCHOOL_ID = ? order by NAME"
+			 )) 
+		{
 			statement.setInt(1, school.getId());
 			ResultSet resultSet = statement.executeQuery();
 			while (resultSet.next()) {
+				// クラスリストの作成
 				SchoolClass schoolClass = new SchoolClass();
 				schoolClass.setId(resultSet.getInt("ID"));
 				schoolClass.setName(resultSet.getString("NAME"));
@@ -45,10 +47,8 @@ public class SchoolClassDao extends Dao {
 	/**
 	 * getメソッド クラス名を指定してクラスを1件取得する
 	 *
-	 * @param name:String
-	 *            クラス名
-	 * @param school:School
-	 *            学校
+	 * @param name:String クラス名
+	 * @param school:School 学校
 	 * @return クラス 存在しない場合はnull
 	 * @throws Exception
 	 */
@@ -56,8 +56,10 @@ public class SchoolClassDao extends Dao {
 		SchoolClass schoolClass = null;
 
 		try (Connection connection = getConnection();
-				PreparedStatement statement = connection.prepareStatement(
-						"select * from SCHOOL_CLASS where SCHOOL_ID = ? and NAME = ?")) {
+			 PreparedStatement statement = connection.prepareStatement(
+					 "select * from SCHOOL_CLASS where SCHOOL_ID = ? and NAME = ?")
+			 )
+		{
 			statement.setInt(1, school.getId());
 			statement.setString(2, name);
 			ResultSet resultSet = statement.executeQuery();
