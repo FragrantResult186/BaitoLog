@@ -7,8 +7,8 @@
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <title></title>
 <script>
-// 起動確認ページにリダイレクト（ログイン画面ができたら baitolog/Login.action に変える）
-location.href = "baitolog/Top.action";
+// ログイン画面にリダイレクト
+location.href = "baitolog/Login.action";
 </script>
 </head>
 <body>
