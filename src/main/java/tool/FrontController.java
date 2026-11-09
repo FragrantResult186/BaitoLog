@@ -3,6 +3,7 @@ package tool;
 import java.io.IOException;
 
 import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,6 +15,8 @@ import jakarta.servlet.http.HttpServletResponse;
  * 例：/baitolog/student/ShiftEdit.action → baitolog.student.ShiftEditAction
  */
 @WebServlet(urlPatterns = { "*.action" })
+// ファイルのアップロード（学生アカウント一括登録）を受け取れるようにする
+@MultipartConfig(maxFileSize = 2 * 1024 * 1024, maxRequestSize = 3 * 1024 * 1024)
 public class FrontController extends HttpServlet {
 
 	@Override

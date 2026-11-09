@@ -5,6 +5,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,6 +14,7 @@ import bean.School;
 import bean.SchoolClass;
 import bean.Student;
 import bean.User;
+import logic.PasswordUtil;
 
 /**
  * 
@@ -144,14 +146,14 @@ public class StudentDao extends Dao {
 	 * 
 	 * USERS・STUDENT・CLASS_ENROLLMENT を1つのトランザクションで登録し、
 	 * 1件でも失敗したら全部取り消す
+	 * 初期パスワードは各学生の生年月日（yyyyMMdd）をハッシュ化した値にする
 	 *
 	 * @param rows:List<ImportRow> CSVの行
 	 * @param school:School 教職員の学校
-	 * @param passwordHash:String 初期パスワードのハッシュ値
 	 * @return 作成した人数:int
 	 * @throws Exception
 	 */
-	public int saveAll(List<ImportRow> rows, School school, String passwordHash) throws Exception {
+	public int saveAll(List<ImportRow> rows, School school) throws Exception {
 		int count = 0;
 
 		try (Connection connection = getConnection()) {
@@ -165,7 +167,7 @@ public class StudentDao extends Dao {
 						Statement.RETURN_GENERATED_KEYS
 				 );
 				 PreparedStatement studentStatement = connection.prepareStatement(
-					"insert into STUDENT (USER_ID, SCHOOL_ID) values (?, ?)"
+					"insert into STUDENT (USER_ID, SCHOOL_ID, BIRTHDAY) values (?, ?, ?)"
 				 );
 				 PreparedStatement enrollmentStatement = connection.prepareStatement(
 					"insert into CLASS_ENROLLMENT (STUDENT_ID, SCHOOL_CLASS_ID, START_DATE) values (?, ?, ?)"
@@ -188,7 +190,7 @@ public class StudentDao extends Dao {
 
 					// ユーザーを登録し、自動で振られたIDを受け取る
 					userStatement.setString(1, row.getStudentNo());
-					userStatement.setString(2, passwordHash);
+					userStatement.setString(2, PasswordUtil.hash(row.getBirthday().format(DateTimeFormatter.BASIC_ISO_DATE)));
 					userStatement.setString(3, row.getName());
 					userStatement.setString(4, User.ROLE_STUDENT);
 					userStatement.executeUpdate();
@@ -199,6 +201,7 @@ public class StudentDao extends Dao {
 					// 学生とクラス在籍を登録
 					studentStatement.setInt(1, userId);
 					studentStatement.setInt(2, school.getId());
+					studentStatement.setObject(3, row.getBirthday());
 					studentStatement.executeUpdate();
 
 					enrollmentStatement.setInt(1, userId);
