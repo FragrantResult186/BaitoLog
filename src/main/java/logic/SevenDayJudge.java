@@ -6,7 +6,7 @@ import java.util.List;
 import bean.Shift;
 import bean.WindowResult;
 
-public class SevenDayJadge {
+public class SevenDayJudge {
 
 
 	public WindowResult judgeWindow(List<Shift> shifts, LocalDate from, LocalDate to, LimitPolicy policy) {
