@@ -8,6 +8,7 @@
 <c:if test="${user.isAuthenticated()}">
 	<div class="nav align-self-end">
 		<span class="nav-item px-2">${user.getName()}</span>
-		<a class="nav-item px-2" href="${pageContext.request.contextPath}/baitolog/Logout.action">ログアウト</a>
+		<a class="nav-item px-2" href="${pageContext.request.contextPath}/baitolog/Logout.action"
+		onclick="return confirm('ログアウトしますか？');">ログアウト</a>
 	</div>
 </c:if>
