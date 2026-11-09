@@ -31,7 +31,7 @@ import tool.Action;
  *
  * 画面の流れ（どの段階も確認してから次へ進む）
  *   1. アップロード   GET                       ファイルを選ぶ
- *   2. 内容の確認     POST action=check         読み込んだ内容と、エラーのある行を見る
+ *   2. 内容の確認     POST action=check         エラーがあれば、エラーの行だけ見る（次へ進めない）。エラーがなければ全行を見る
  *   3. 登録の最終確認 POST action=confirm       「N人を登録します」を見る
  *   4. 結果           POST action=register      登録して、結果の画面へ移動（GET ?done=1）
  *   戻る              POST action=preview       最終確認から内容の確認へ戻る
@@ -46,7 +46,6 @@ public class AccountImportAction extends Action {
 	private static final String S_TOKEN = "importToken";
 	private static final String S_FILE = "importFileName";
 	private static final String S_CREATED = "importCreated";
-	private static final String S_SKIPPED = "importSkipped";
 
 	@Override
 	public void execute(HttpServletRequest req, HttpServletResponse res) throws Exception {
@@ -92,9 +91,7 @@ public class AccountImportAction extends Action {
 			}
 			mode = "result";
 			req.setAttribute("createdCount", created);
-			req.setAttribute("skippedRows", session.getAttribute(S_SKIPPED));
 			session.removeAttribute(S_CREATED);
-			session.removeAttribute(S_SKIPPED);
 		} else if ("check".equals(action)) {
 			// 2 ファイルを読み込んで、内容を確認する画面へ
 			clearImport(session);
@@ -113,8 +110,13 @@ public class AccountImportAction extends Action {
 				}
 				rows = ImportFileReader.read(data, fileName);
 				checkRows(rows, school, userDao, schoolClassDao);
-				// クラス、学生番号の順に並べる
-				rows.sort(Comparator.comparing(ImportRow::getClassName).thenComparing(ImportRow::getStudentNo));
+				if (countErrors(rows) > 0) {
+					// エラーがあるときは、ファイルを直しやすいよう行の順に並べる
+					rows.sort(Comparator.comparingInt(ImportRow::getLineNo));
+				} else {
+					// エラーがなければ、クラス、学生番号の順に並べる
+					rows.sort(Comparator.comparing(ImportRow::getClassName).thenComparing(ImportRow::getStudentNo));
+				}
 
 				token = UUID.randomUUID().toString();
 				session.setAttribute(S_ROWS, rows);
@@ -141,8 +143,9 @@ public class AccountImportAction extends Action {
 				if (countErrors(rows) != errorsBefore) {
 					errorMessage = "登録済みのデータが変わったため、もう一度内容を確認してください";
 					mode = "preview";
-				} else if (countErrors(rows) == rows.size()) {
-					errorMessage = "登録できる学生がいません";
+				} else if (countErrors(rows) > 0) {
+					// エラーが1行でもあるファイルは、次へ進めない（ファイルを直して読み込み直す）
+					errorMessage = "エラーがあるため進めません。ファイルを直して、もう一度読み込んでください";
 					mode = "preview";
 				} else if ("preview".equals(action)) {
 					// 最終確認から内容の確認へ戻る
@@ -151,17 +154,10 @@ public class AccountImportAction extends Action {
 					mode = "confirm";
 				} else {
 					// 5 登録（同じ確認内容では二度登録できないよう、先にセッションから外す）
-					List<ImportRow> skipped = new ArrayList<>();
-					for (ImportRow row : rows) {
-						if (row.getError() != null) {
-							skipped.add(row);
-						}
-					}
 					clearImport(session);
 					try {
 						int created = studentDao.saveAll(rows, school);
 						session.setAttribute(S_CREATED, created);
-						session.setAttribute(S_SKIPPED, skipped);
 						mode = "done-redirect";
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -209,10 +205,15 @@ public class AccountImportAction extends Action {
 	 */
 	private void checkRows(List<ImportRow> rows, School school, UserDao userDao, SchoolClassDao schoolClassDao)
 			throws Exception {
-		// 学生番号がファイルの中で重なっているか数える
-		Map<String, Integer> counts = new HashMap<>();
+		// 学生番号が重なっている行、同じ人（氏名と生年月日が同じ）が2回ある行を調べる
+		Map<String, List<Integer>> noLines = new HashMap<>();
+		Map<String, List<Integer>> personLines = new HashMap<>();
 		for (ImportRow row : rows) {
-			counts.merge(row.getStudentNo(), 1, Integer::sum);
+			noLines.computeIfAbsent(row.getStudentNo(), k -> new ArrayList<>()).add(row.getLineNo());
+			if (row.getBirthday() != null && !row.getName().isEmpty()) {
+				String key = row.getName().replace(" ", "").replace("\u3000", "") + "|" + row.getBirthday();
+				personLines.computeIfAbsent(key, k -> new ArrayList<>()).add(row.getLineNo());
+			}
 		}
 
 		// すでに登録されている学生番号
@@ -236,14 +237,33 @@ public class AccountImportAction extends Action {
 			}
 			// 前回の照合の結果は消して、やり直す
 			row.setError(null);
-			if (counts.get(row.getStudentNo()) > 1) {
-				row.setError("学生番号がファイルの中で重なっています");
+			List<Integer> sameNo = noLines.get(row.getStudentNo());
+			List<Integer> samePerson = row.getBirthday() == null ? null
+					: personLines.get(row.getName().replace(" ", "").replace("\u3000", "") + "|" + row.getBirthday());
+			if (sameNo.size() > 1) {
+				row.setError("学生番号が重複しています（" + lineText(sameNo) + "）");
+			} else if (samePerson != null && samePerson.size() > 1) {
+				row.setError("同じ学生が重複しています（氏名と生年月日が同じ：" + lineText(samePerson) + "）");
 			} else if (registered.contains(row.getStudentNo())) {
 				row.setError("この学生番号はすでに登録されています");
 			} else if (!classNames.contains(row.getClassName())) {
 				row.setError("クラス「" + row.getClassName() + "」が学校に登録されていません");
 			}
 		}
+	}
+
+	/**
+	 * 行番号を「2・5行目」の形にする
+	 */
+	private String lineText(List<Integer> lines) {
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < lines.size(); i++) {
+			if (i > 0) {
+				sb.append("・");
+			}
+			sb.append(lines.get(i));
+		}
+		return sb.append("行目").toString();
 	}
 
 	/**
