@@ -9,6 +9,7 @@
 		<c:when test="${user.teacher}">
 			<%-- 教職員用メニュー --%>
 			<li class="nav-item my-3"><a href="${root}/teacher/StudentList.action">学生一覧</a></li>
+			<li class="nav-item mb-3"><a href="${root}/teacher/AccountImport.action">アカウント登録</a></li>
 		</c:when>
 		<c:otherwise>
 			<%-- 学生用メニュー（各画面ができたら href を有効にする） --%>

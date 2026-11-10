@@ -1,6 +1,7 @@
 package bean;
 
 import java.io.Serializable;
+import java.time.LocalDate;
 
 /**
  * 学生CSVの1行
@@ -26,6 +27,11 @@ public class ImportRow implements Serializable {
 	 * クラス名:String
 	 */
 	private String className;
+
+	/**
+	 * 生年月日（初期パスワードに使う）:LocalDate
+	 */
+	private LocalDate birthday;
 
 	/**
 	 * 重複・空欄:String
@@ -65,6 +71,14 @@ public class ImportRow implements Serializable {
 
 	public void setClassName(String className) {
 		this.className = className;
+	}
+
+	public LocalDate getBirthday() {
+		return birthday;
+	}
+
+	public void setBirthday(LocalDate birthday) {
+		this.birthday = birthday;
 	}
 
 	public String getError() {
