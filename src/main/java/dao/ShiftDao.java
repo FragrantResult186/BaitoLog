@@ -27,8 +27,7 @@ public class ShiftDao extends Dao {
 	 * シフトを勤務先つきで取るSQL
 	 */
 	private String baseSql =
-			  "select S.*, W.NAME as W_NAME, W.STORE_NAME as W_STORE_NAME, "
-			+ "W.HOURLY_WAGE as W_HOURLY_WAGE, W.NIGHT_RATE as W_NIGHT_RATE, W.COLOR as W_COLOR "
+			  "select S.*, W.NAME as W_NAME, W.COLOR as W_COLOR "
 			+ "from SHIFT S join WORKPLACE W on W.ID = S.WORKPLACE_ID ";
 
 	/**
