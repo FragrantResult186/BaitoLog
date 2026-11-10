@@ -27,8 +27,7 @@ public class ShiftDao extends Dao {
 	 * シフトを勤務先つきで取るSQL
 	 */
 	private String baseSql =
-			  "select S.*, W.NAME as W_NAME, W.STORE_NAME as W_STORE_NAME, "
-			+ "W.HOURLY_WAGE as W_HOURLY_WAGE, W.NIGHT_RATE as W_NIGHT_RATE, W.COLOR as W_COLOR "
+			  "select S.*, W.NAME as W_NAME, W.COLOR as W_COLOR "
 			+ "from SHIFT S join WORKPLACE W on W.ID = S.WORKPLACE_ID ";
 
 	/**
@@ -163,7 +162,7 @@ public class ShiftDao extends Dao {
 	}
 
 	/**
-	 * countメソッド 勤務先に登録されているシフトの件数を数える（勤務先を削除できるかの確認用）
+	 * countメソッド 勤務先に登録されているシフトの件数を数える
 	 *
 	 * @param workplace:Workplace 勤務先
 	 * @return 件数:int
@@ -186,12 +185,10 @@ public class ShiftDao extends Dao {
 	}
 
 	/**
-	 * saveメソッド シフトを保存する（id が 0 なら登録、それ以外は更新）
-	 * 勤務先が本人のものかは、呼ぶ前に WorkplaceDao.get(id, student) で確認すること
+	 * saveメソッド シフトを保存する
 	 *
-	 * @param shift:Shift
-	 *            シフト（student と workplace がセットされていること）
-	 * @return 成功:true, ほかの人のシフトだった:false
+	 * @param shift:Shift シフト
+	 * @return 成功:true ほかの人のシフトだった:false
 	 * @throws Exception
 	 */
 	public boolean save(Shift shift) throws Exception {
@@ -219,7 +216,7 @@ public class ShiftDao extends Dao {
 					}
 				}
 			} else {
-				// 更新（本人のシフトでなければ0件になる）
+				// 更新
 				try (PreparedStatement statement = connection.prepareStatement(
 						"update SHIFT set WORKPLACE_ID = ?, WORK_DATE = ?, START_TIME = ?, END_TIME = ?, "
 					  + "BREAK_START = ?, BREAK_END = ? where ID = ? and STUDENT_ID = ?"))
@@ -243,8 +240,7 @@ public class ShiftDao extends Dao {
 	/**
 	 * deleteメソッド シフトを削除する
 	 *
-	 * @param shift:Shift
-	 *            シフト（student がセットされていること）
+	 * @param shift:Shift シフト
 	 * @return 成功:true, 失敗:false
 	 * @throws Exception
 	 */
