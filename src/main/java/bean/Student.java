@@ -1,6 +1,7 @@
 package bean;
 
 import java.io.Serializable;
+import java.time.LocalDate;
 
 /**
  * 学生
@@ -28,9 +29,9 @@ public class Student extends User implements Serializable {
 	private String name;
 	
 	/**
-	 * 生年月日:String
+	 * 生年月日（初期パスワードに使う。登録されていなければnull）:LocalDate
 	 */
-	private String birthday;
+	private LocalDate birthday;
 
 	/**
 	 * ログイン済みチェック:boolean
@@ -82,12 +83,12 @@ public class Student extends User implements Serializable {
 		this.name = name; 
 	}
 	
-	public String getBirthday() { 
-		return birthday; 
+	public LocalDate getBirthday() {
+		return birthday;
 	}
-	
-	public void setBirthday(String birthday) { 
-		this.birthday = birthday; 
+
+	public void setBirthday(LocalDate birthday) {
+		this.birthday = birthday;
 	}
 	
 	public boolean isFirstLoginDone() { 
