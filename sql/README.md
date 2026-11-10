@@ -7,12 +7,33 @@
 | `create_tables.sql` | 全テーブルの CREATE 文（テーブル定義書から作る） |
 | `sample_data.sql` | 動作確認用のサンプルデータ（INSERT 文） |
 
-## H2 コンソールで実行する
-1. **Tomcat を止めた状態で**、`src/main/webapp/WEB-INF/lib/h2-2.1.214.jar` をダブルクリックする（またはコマンドで `java -jar h2-2.1.214.jar`）
-2. ブラウザに H2 コンソールが開くので、次のように入力して「接続」
-   - JDBC URL：`jdbc:h2:~/baitolog;AUTO_SERVER=TRUE`
-   - ユーザー名：`sa`　パスワード：空
-3. SQL を貼り付けて「実行」
+## PostgreSQL の準備（各自のPCで1回だけ）
+DB は PostgreSQL。各自のPCに入れて使う（接続先：`localhost:5432`、DB名：`baitolog`）。
+
+1. PostgreSQL をインストールする（インストーラの管理者 `postgres` のパスワードは忘れないようにする）
+2. **pgAdmin**（インストーラに付いてくる）を開き、サーバーに接続して「クエリツール」を開く。または `psql -U postgres`
+3. 次の2つを、1つずつ実行する（開発用のユーザーとDBを作る。全員同じにして、context.xml を共通にする）
+```sql
+CREATE USER baitolog WITH PASSWORD 'baitolog';
+```
+```sql
+CREATE DATABASE baitolog OWNER baitolog ENCODING 'UTF8' TEMPLATE template0;
+```
+4. 作った `baitolog` データベースに、ユーザー `baitolog`（パスワード `baitolog`）で接続し直す
+5. `create_tables.sql` の中身を貼り付けて実行し、そのあと `sample_data.sql` を実行する
+
+（pgAdmin では、左の一覧で `baitolog` データベースを右クリック → 「クエリツール」を選ぶと、そのDBにつながった状態で開く。接続のユーザーは `postgres` のままでもよいが、そのときは作ったテーブルの持ち主が `postgres` になるので、アプリ側（ユーザー `baitolog`）からは権限エラーになる場合がある。迷ったらユーザー `baitolog` で接続する）
+
+## ルール
+- **テーブルを変えたら、テーブル定義書とこのフォルダの SQL を両方直す**
+- SQL を変えたら、チームに「◯◯テーブルを変えたので create_tables.sql を流し直して」と連絡する（各自のPCのDBは自動では変わらない）
+- DBを作り直したいときは、次の2行を実行してから、`create_tables.sql` → `sample_data.sql` の順に流し直す
+```sql
+DROP SCHEMA public CASCADE;
+```
+```sql
+CREATE SCHEMA public;
+```
 
 ## ルール
 - **テーブルを変えたら、テーブル定義書とこのフォルダの SQL を両方直す**
@@ -28,8 +49,10 @@
 
 `create_tables.sql` → `sample_data.sql` の順に、空のDBへ1回だけ流す。
 
+※ 小数の列は PostgreSQL に合わせて `DOUBLE PRECISION` にしてある（`DOUBLE` はPostgreSQLにない）。
+
 ## 既存のDBに生年月日の列を足す（学生アカウント一括登録のため）
-STUDENT テーブルに BIRTHDAY 列を追加した。すでにテーブルを作っている人は、H2 コンソールで次を1回実行する。
+STUDENT テーブルに BIRTHDAY 列を追加した。すでにテーブルを作っている人は、次を1回実行する。
 ```sql
 ALTER TABLE STUDENT ADD COLUMN IF NOT EXISTS BIRTHDAY DATE;
 ```

@@ -10,7 +10,7 @@
 | 言語 | Java 21 |
 | サーバー | Tomcat 10.1（Pleiades の「Tomcat10 (Java21)」） |
 | 作り方 | Servlet / JSP（FrontController ＋ Action ＋ DAO ＋ Bean） |
-| DB | H2 2.1.214 |
+| DB | PostgreSQL（各自のPCに入れる。準備のしかたは `sql/README.md`） |
 
 ---
 
@@ -34,7 +34,7 @@
 2. ブラウザで **http://localhost:8080/BaitoLog/** を開く
 3. 「起動確認」「データベース接続：OK」と出れば準備完了
 
-- DB は最初にアクセスしたときに自動で作られる（場所：`C:\Users\自分\baitolog.mv.db`）。**H2 を先に起動しておく必要はない**
+- DB（PostgreSQL）は、先に起動しておく（Windowsなら、インストールするとサービスとして自動で動く）。テーブルは `sql/README.md` の手順で作る
 - 止めるときはサーバー タブの **■（停止）**
 
 ---
@@ -56,7 +56,7 @@ src/main/webapp/
   baitolog/teacher/   教職員の画面の JSP
   css/style.css
   META-INF/context.xml  DBの接続設定
-  WEB-INF/lib/          H2・JSTL の jar
+  WEB-INF/lib/          PostgreSQL JDBC・JSTL の jar
 sql/         テーブル作成・サンプルデータの SQL
 ```
 
