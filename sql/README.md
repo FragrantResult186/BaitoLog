@@ -27,3 +27,10 @@
 | teacher01 | password | 教職員 |
 
 `create_tables.sql` → `sample_data.sql` の順に、空のDBへ1回だけ流す。
+
+## 生年月日の列（学生アカウント一括登録のため）
+STUDENT テーブルに BIRTHDAY 列を追加した。すでにテーブルを作っている人は、次を1回実行する。
+```sql
+ALTER TABLE STUDENT ADD COLUMN IF NOT EXISTS BIRTHDAY DATE;
+```
+（流し直す人は、`create_tables.sql` → `sample_data.sql` の順でよい）
