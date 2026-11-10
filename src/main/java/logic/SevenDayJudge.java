@@ -5,11 +5,13 @@ import java.util.List;
 
 import bean.Shift;
 import bean.WindowResult;
+import bean.Workplace;
 
 public class SevenDayJudge {
 
 
-	public WindowResult judgeWindow(List<Shift> shifts, LocalDate from, LocalDate to, LimitPolicy policy) {
+	public WindowResult judgeWindow(List<Shift> shifts, List<Workplace> workplaces,
+			LocalDate from, LocalDate to, LimitPolicy policy) {
 		double total = 0;
 
 		if (shifts != null) {

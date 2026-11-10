@@ -27,9 +27,7 @@ public class ShiftDao extends Dao {
 	 * シフトを勤務先つきで取るSQL
 	 */
 	private String baseSql =
-			  "select S.*, W.NAME as W_NAME, W.STORE_NAME as W_STORE_NAME, "
-			+ "W.HOURLY_WAGE as W_HOURLY_WAGE, W.NIGHT_RATE as W_NIGHT_RATE, W.COLOR as W_COLOR "
-			+ "from SHIFT S join WORKPLACE W on W.ID = S.WORKPLACE_ID ";
+			"select S.* from SHIFT S ";
 
 	/**
 	 * postFilterメソッド リザルトセットをシフトのリストにする
@@ -41,26 +39,15 @@ public class ShiftDao extends Dao {
 	 */
 	private List<Shift> postFilter(ResultSet resultSet, Map<Integer, Student> students) throws Exception {
 		List<Shift> list = new ArrayList<>();
-		// 同じ勤務先は同じインスタンスを使う
-		Map<Integer, Workplace> workplaces = new HashMap<>();
 
 		while (resultSet.next()) {
 			Student student = students.get(resultSet.getInt("STUDENT_ID"));
 
-			int workplaceId = resultSet.getInt("WORKPLACE_ID");
-			Workplace workplace = workplaces.get(workplaceId);
-			if (workplace == null) {
-				workplace = new Workplace();
-				workplace.setId(workplaceId);
-				workplace.setName(resultSet.getString("W_NAME"));
-				workplace.setColor(resultSet.getString("W_COLOR"));
-				workplaces.put(workplaceId, workplace);
-			}
 
 			Shift shift = new Shift();
 			shift.setId(resultSet.getInt("ID"));
 			shift.setStudentId(student.getId());
-			shift.setWorkplaceId(workplaceId);
+			shift.setWorkplaceId(resultSet.getInt("WORKPLACE_ID"));
 			shift.setWorkDate(resultSet.getObject("WORK_DATE", LocalDate.class));
 			shift.setStartTime(resultSet.getObject("START_TIME", LocalTime.class));
 			shift.setEndTime(resultSet.getObject("END_TIME", LocalTime.class));
