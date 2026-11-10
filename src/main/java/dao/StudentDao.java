@@ -27,7 +27,7 @@ public class StudentDao extends Dao {
 	 * 学生を取るSQL
 	 */
 	private String baseSql = 
-			  "select U.ID, U.LOGIN_ID, U.NAME, U.ROLE, U.PASSWORD_INITIALIZED, "
+			  "select U.ID, U.LOGIN_ID, U.NAME, U.ROLE, U.PASSWORD_INITIALIZED, S.BIRTHDAY, "
 			+ "CL.ID as CLASS_ID, CL.NAME as CLASS_NAME "
 			+ "from STUDENT S "
 			+ "join USERS U on U.ID = S.USER_ID "
@@ -54,6 +54,7 @@ public class StudentDao extends Dao {
 			student.setName(resultSet.getString("NAME"));
 			student.setRole(resultSet.getString("ROLE"));
 			student.setPasswordInitialized(resultSet.getBoolean("PASSWORD_INITIALIZED"));
+			student.setBirthday(resultSet.getObject("BIRTHDAY", LocalDate.class));
 			student.setSchool(school);
 			// クラスに在籍していない日はnullのまま
 			if (resultSet.getObject("CLASS_ID") != null) {
@@ -139,6 +140,37 @@ public class StudentDao extends Dao {
 		}
 
 		return list;
+	}
+
+	/**
+	 * resetPasswordメソッド 学生のパスワードを生年月日（yyyyMMdd）に戻す
+	 *
+	 * USERS の PASSWORD と PASSWORD_INITIALIZED だけを更新する。
+	 * 勤務先・シフトテンプレート・シフト・報告書など、ほかのデータは変えない
+	 * 学校が同じ学生かどうかは、呼ぶ側が get(id, school) で確かめておく
+	 *
+	 * @param student:Student 学生（生年月日が必要）
+	 * @return 成功:true, 失敗（生年月日がない・学生がいない）:false
+	 * @throws Exception
+	 */
+	public boolean resetPassword(Student student) throws Exception {
+		if (student == null || student.getBirthday() == null) {
+			return false;
+		}
+		int count = 0;
+
+		try (Connection connection = getConnection();
+			 PreparedStatement statement = connection.prepareStatement(
+					 "update USERS set PASSWORD = ?, PASSWORD_INITIALIZED = false where ID = ? and ROLE = ?"
+			 ))
+		{
+			statement.setString(1, PasswordUtil.hash(student.getBirthday().format(DateTimeFormatter.BASIC_ISO_DATE)));
+			statement.setInt(2, student.getId());
+			statement.setString(3, User.ROLE_STUDENT);
+			count = statement.executeUpdate();
+		}
+
+		return count > 0;
 	}
 
 	/**
