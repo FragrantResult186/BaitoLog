@@ -10,12 +10,12 @@
 -->
 <Context reloadable="true">
 	<Resource
-		name="jdbc/baitolog"
-		auth="Container"
-		type="javax.sql.DataSource"
-		driverClassName="org.h2.Driver"
-		url="jdbc:h2:~/baitolog;AUTO_SERVER=TRUE"
-		username="sa"
-		password=""
+	    name="jdbc/baitolog"
+	    auth="Container"
+	    type="javax.sql.DataSource"
+	    driverClassName="org.postgresql.Driver"
+	    url="jdbc:postgresql://localhost:5432/baitolog"
+	    username="baitolog"
+	    password="baitolog"
 	/>
 </Context>

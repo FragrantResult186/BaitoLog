@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Context>
+	<Resource
+		name="jdbc/baitolog"
+		auth="Container"
+		type="javax.sql.DataSource"
+		driverClassName="org.postgresql.Driver"
+		url="${db.url}"
+		username="${db.user}"
+		password="${db.password}"
+		maxTotal="5"
+		maxIdle="2"
+		minIdle="0"
+		testOnBorrow="true"
+		validationQuery="select 1"
+	/>
+</Context>
