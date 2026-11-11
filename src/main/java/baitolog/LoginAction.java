@@ -83,7 +83,7 @@ public class LoginAction extends Action {
 			} else if (user.isStudent()) {
 				res.sendRedirect(root + "/student/StudentTop.action");
 			} else {
-				res.sendRedirect(root + "/teacher/TeacherTop.action");
+				res.sendRedirect(root + "/teacher/StudentList.action");
 			}
 		} else {
 			req.getRequestDispatcher("login.jsp").forward(req, res);

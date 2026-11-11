@@ -1,32 +1,48 @@
 package baitolog.teacher;
 
+import java.io.PrintWriter;
 import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import bean.JudgeSummary;
+import bean.LongBreak;
 import bean.School;
 import bean.SchoolClass;
+import bean.Shift;
 import bean.Student;
+import bean.StudentSummary;
 import bean.Teacher;
 import bean.User;
+import bean.WindowResult;
+import bean.Workplace;
+import dao.LongBreakDao;
 import dao.SchoolClassDao;
+import dao.ShiftDao;
 import dao.StudentDao;
+import dao.WorkplaceDao;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import logic.LimitPolicy;
+import logic.SevenDayJudge;
+import logic.TargetMonth;
 import tool.Action;
 
 /**
- * 学生一覧（教職員）
- * 自分の学校の学生を、クラス・氏名・学生番号で絞り込んで見る。
- * 学生ごとに「パスワードリセット」の画面へ進める
+ * 学生一覧（教職員のトップ画面）
+ * 月とクラスを選んで、学生ごとの「7日間の最大の労働時間」と状態（超過／間近／上限内）を見る。
+ * 一番時間が多い学生が上に並ぶ。学生の氏名を押すと、学生別記録へ進む
  *
- * GET ?classId=（クラスで絞る） &q=（氏名か学生番号の一部で絞る）
+ * GET ?target_month=yyyy-MM（対象期間。なければ今月） &class_id=（クラス。なければすべて）
+ *     &csv=1（絞り込んだ一覧をCSVで出力）
  */
 public class StudentListAction extends Action {
-
-	/** セッションに置く名前（パスワードリセットのあとに1回だけ表示する） */
-	public static final String S_RESET_MESSAGE = "studentResetMessage";
 
 	@Override
 	public void execute(HttpServletRequest req, HttpServletResponse res) throws Exception {
@@ -36,9 +52,15 @@ public class StudentListAction extends Action {
 		String errorMessage = "";
 		List<Student> students = new ArrayList<>();
 		List<SchoolClass> classes = new ArrayList<>();
+		List<StudentSummary> summaries = new ArrayList<>();
 		SchoolClass selectedClass = null;
 		StudentDao studentDao = new StudentDao();
 		SchoolClassDao schoolClassDao = new SchoolClassDao();
+		ShiftDao shiftDao = new ShiftDao();
+		WorkplaceDao workplaceDao = new WorkplaceDao();
+		LongBreakDao longBreakDao = new LongBreakDao();
+		SevenDayJudge judge = new SevenDayJudge();
+		LocalDate today = LocalDate.now();
 
 		//リクエストパラメータ―の取得 2
 		HttpSession session = req.getSession(false);
@@ -49,12 +71,14 @@ public class StudentListAction extends Action {
 			return;
 		}
 		School school = ((Teacher) user).getSchool();
-		String classIdText = req.getParameter("classId");
-		String keyword = req.getParameter("q") == null ? "" : req.getParameter("q").trim();
+		YearMonth month = TargetMonth.parse(req.getParameter("target_month"), today);
+		String classIdText = req.getParameter("class_id");
+		boolean isCsv = "1".equals(req.getParameter("csv"));
+		LocalDate monthStart = month.atDay(1);
+		LocalDate monthEnd = month.atEndOfMonth();
 
 		//DBからデータ取得 3
 		classes = schoolClassDao.filter(school);
-		LocalDate today = LocalDate.now();
 
 		//ビジネスロジック 4
 		// 絞り込むクラス（自分の学校のクラスだけ選べる）
@@ -68,37 +92,82 @@ public class StudentListAction extends Action {
 				errorMessage = "選んだクラスが見つかりません";
 			}
 		}
+		// クラスは「月初の日」の在籍で見る（クラス替えをした学生は、その月の最初のクラスに出る）
 		if (selectedClass != null) {
-			students = studentDao.filter(school, selectedClass, today);
+			students = studentDao.filter(school, selectedClass, monthStart);
 		} else {
-			students = studentDao.filter(school, today);
+			students = studentDao.filter(school, monthStart);
 		}
-		// 氏名か学生番号に、入力した文字が入っている学生だけ残す（空白は無視する）
-		if (!keyword.isEmpty()) {
-			String key = normalize(keyword);
-			List<Student> matched = new ArrayList<>();
-			for (Student student : students) {
-				if (normalize(student.getName()).contains(key) || normalize(student.getLoginId()).contains(key)) {
-					matched.add(student);
+
+		// 7日間の判定には、月初の6日前からのシフトが必要
+		LocalDate shiftStart = monthStart.minusDays(6);
+		List<Shift> allShifts = shiftDao.filter(students, shiftStart, monthEnd);
+		List<LongBreak> longBreaks = longBreakDao.filter(school, shiftStart, monthEnd);
+		LimitPolicy policy = new LimitPolicy(school, longBreaks);
+
+		// 学生ID → シフト
+		Map<Integer, List<Shift>> shiftMap = new HashMap<>();
+		for (Shift shift : allShifts) {
+			shiftMap.computeIfAbsent(shift.getStudentId(), k -> new ArrayList<>()).add(shift);
+		}
+
+		int cautionCount = 0;
+		int overCount = 0;
+		int noneCount = 0;
+		for (Student student : students) {
+			List<Shift> shifts = shiftMap.getOrDefault(student.getId(), new ArrayList<>());
+			List<Workplace> workplaces = workplaceDao.findByStudent(student.getId());
+
+			StudentSummary summary = new StudentSummary();
+			summary.setStudent(student);
+			summary.setWorkplaceCount(workplaces.size());
+			// その月にシフトがあれば「入力あり」（前月の分だけでは、入力ありにしない）
+			for (Shift shift : shifts) {
+				if (!shift.getWorkDate().isBefore(monthStart)) {
+					summary.setEntered(true);
+					break;
 				}
 			}
-			students = matched;
+			if (summary.isEntered()) {
+				JudgeSummary judged = judge.judgeMonth(shifts, workplaces, monthStart, monthEnd, policy);
+				summary.setMaxWindow(judged.getMaxWindow());
+			}
+
+			String status = summary.getStatus();
+			if (WindowResult.STATUS_OVER.equals(status)) {
+				overCount++;
+			} else if (WindowResult.STATUS_CAUTION.equals(status)) {
+				cautionCount++;
+			} else if (StudentSummary.STATUS_NONE.equals(status)) {
+				noneCount++;
+			}
+			summaries.add(summary);
 		}
+
+		// 7日間の最大が多い順（未入力は一番下。同じなら学生番号の順）
+		summaries.sort(Comparator
+				.comparingDouble((StudentSummary s) -> s.isEntered() ? -s.getMaxWindow().getTotalHours() : 1)
+				.thenComparing(s -> s.getStudent().getLoginId()));
 
 		//DBへデータ保存 5
 		// 一覧は見るだけなので、保存はしない
 
-		//レスポンス値をセット 6
-		// パスワードリセットのあとに1回だけ出すメッセージ
-		Object flash = session.getAttribute(S_RESET_MESSAGE);
-		if (flash != null) {
-			req.setAttribute("resetMessage", flash);
-			session.removeAttribute(S_RESET_MESSAGE);
+		//CSV出力（絞り込んだ一覧をそのまま出す）
+		if (isCsv) {
+			writeCsv(res, summaries, month);
+			return;
 		}
-		req.setAttribute("students", students);
+
+		//レスポンス値をセット 6
+		req.setAttribute("summaries", summaries);
 		req.setAttribute("classes", classes);
+		req.setAttribute("months", TargetMonth.options(today));
+		req.setAttribute("targetMonth", month.toString());
 		req.setAttribute("selectedClassId", selectedClass == null ? "" : String.valueOf(selectedClass.getId()));
-		req.setAttribute("keyword", keyword);
+		req.setAttribute("studentCount", students.size());
+		req.setAttribute("cautionCount", cautionCount);
+		req.setAttribute("overCount", overCount);
+		req.setAttribute("noneCount", noneCount);
 		req.setAttribute("errorMessage", errorMessage);
 
 		//JSPへフォワード 7
@@ -106,9 +175,56 @@ public class StudentListAction extends Action {
 	}
 
 	/**
-	 * 空白（全角も）を消して、小文字にそろえる
+	 * writeCsvメソッド 一覧をCSVで返す（Excelで開けるよう、先頭にBOMをつける）
 	 */
-	private String normalize(String s) {
-		return s == null ? "" : s.replace("　", "").replace(" ", "").toLowerCase();
+	private void writeCsv(HttpServletResponse res, List<StudentSummary> summaries, YearMonth month) throws Exception {
+		DateTimeFormatter md = DateTimeFormatter.ofPattern("M/d");
+		res.setContentType("text/csv; charset=UTF-8");
+		res.setHeader("Content-Disposition", "attachment; filename=\"student_list_" + month + ".csv\"");
+		PrintWriter out = res.getWriter();
+		out.print("﻿");
+		out.print("学生番号,氏名,クラス,勤務先数,7日間の最大(時間),該当期間,状態\r\n");
+		for (StudentSummary s : summaries) {
+			Student student = s.getStudent();
+			WindowResult w = s.getMaxWindow();
+			out.print(csv(student.getLoginId()) + ",");
+			out.print(csv(student.getName()) + ",");
+			out.print(csv(student.getSchoolClass() == null ? "" : student.getSchoolClass().getName()) + ",");
+			out.print(s.getWorkplaceCount() + ",");
+			out.print((w == null ? "未入力" : String.format("%.1f", w.getTotalHours())) + ",");
+			out.print((w == null ? "" : w.getStartDate().format(md) + "～" + w.getEndDate().format(md)) + ",");
+			out.print(statusText(s.getStatus()) + "\r\n");
+		}
+		out.flush();
+	}
+
+	/**
+	 * csvメソッド CSVの1つ分の文字にする（カンマ・引用符・改行は引用符で囲む）
+	 * 先頭が = + - @ の文字は、Excelで式として動かないよう ' をつける
+	 */
+	private String csv(String s) {
+		if (s == null) {
+			return "";
+		}
+		if (!s.isEmpty() && "=+-@".indexOf(s.charAt(0)) >= 0) {
+			s = "'" + s;
+		}
+		if (s.contains(",") || s.contains("\"") || s.contains("\n") || s.contains("\r")) {
+			s = "\"" + s.replace("\"", "\"\"") + "\"";
+		}
+		return s;
+	}
+
+	private String statusText(String status) {
+		if (WindowResult.STATUS_OVER.equals(status)) {
+			return "超過";
+		}
+		if (WindowResult.STATUS_CAUTION.equals(status)) {
+			return "間近";
+		}
+		if (WindowResult.STATUS_OK.equals(status)) {
+			return "上限内";
+		}
+		return "ー";
 	}
 }
