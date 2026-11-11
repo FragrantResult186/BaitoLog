@@ -55,7 +55,7 @@ public class StudentTopAction extends Action {
 		User user = (User) session.getAttribute("user");
 		if (!(user instanceof Student)) {
 			// 未ログイン・教職員の場合はログイン画面へ
-			res.sendRedirect("Login.action");
+			res.sendRedirect(req.getContextPath() + "/baitolog/Login.action");
 			return;
 		}
 		Student student = (Student) user;

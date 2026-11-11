@@ -88,8 +88,8 @@
 			</div>
 
 			<%-- 残り時間メッセージ --%>
-			<p class="mb-4">
-				<c:choose>
+			<p class="mb-4 text-center border rounded p-2">
+				<c:choose> 
 					<c:when test="${result.over}">
 						上限を <fmt:formatNumber value="${result.overHours}" pattern="0.##" /> 時間 超えています
 					</c:when>
