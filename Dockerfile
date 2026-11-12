@@ -19,6 +19,6 @@ RUN mkdir -p /usr/local/tomcat/webapps/ROOT/WEB-INF/classes \
       @/tmp/sources.txt \
  && rm -rf /tmp/src /tmp/sources.txt
 
-ENV JAVA_OPTS="-Xmx320m"
+ENV JAVA_OPTS="-Xmx320m -Dorg.apache.tomcat.util.digester.PROPERTY_SOURCE=org.apache.tomcat.util.digester.EnvironmentPropertySource"
 
 EXPOSE 8080
