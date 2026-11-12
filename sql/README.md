@@ -34,3 +34,6 @@ STUDENT テーブルに BIRTHDAY 列を追加した。すでにテーブルを�
 ALTER TABLE STUDENT ADD COLUMN IF NOT EXISTS BIRTHDAY DATE;
 ```
 （流し直す人は、`create_tables.sql` → `sample_data.sql` の順でよい）
+
+## 既存のDBに足すもの
+- 長期休暇・報告書のテーブル（`LONG_BREAK`・`REPORT`・`REPORT_ITEM`）は、`create_tables.sql` の最後の部分だけ流せば足せる（`IF NOT EXISTS` なので、すでにあるテーブルは変わらない）
