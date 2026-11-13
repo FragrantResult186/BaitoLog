@@ -89,7 +89,7 @@ public class SetPasswordAction extends Action {
 			if (user.isStudent()) {
 				res.sendRedirect(root + "/student/StudentTop.action");
 			} else {
-				res.sendRedirect(root + "/teacher/TeacherTop.action");
+				res.sendRedirect(root + "/teacher/StudentList.action");
 			}
 		} else {
 			req.getRequestDispatcher("set_password.jsp").forward(req, res);

@@ -16,7 +16,10 @@ public class LongBreakDao extends Dao {
 		
 		try (Connection connection = getConnection();
 		 PreparedStatement statement = connection.prepareStatement(
-				 ""
+				 "select * from LONG_BREAK "
+					 + "where SCHOOL_ID = ? and START_DATE <= ? and END_DATE >= ? "
+					 + "order by START_DATE"
+					
 			))
 		
 		{

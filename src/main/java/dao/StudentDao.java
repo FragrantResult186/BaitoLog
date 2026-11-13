@@ -5,6 +5,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,6 +14,7 @@ import bean.School;
 import bean.SchoolClass;
 import bean.Student;
 import bean.User;
+import logic.PasswordUtil;
 
 /**
  * 
@@ -25,7 +27,7 @@ public class StudentDao extends Dao {
 	 * 学生を取るSQL
 	 */
 	private String baseSql = 
-			  "select U.ID, U.LOGIN_ID, U.NAME, U.ROLE, U.PASSWORD_INITIALIZED, "
+			  "select U.ID, U.LOGIN_ID, U.NAME, U.ROLE, U.PASSWORD_INITIALIZED, S.BIRTHDAY, "
 			+ "CL.ID as CLASS_ID, CL.NAME as CLASS_NAME "
 			+ "from STUDENT S "
 			+ "join USERS U on U.ID = S.USER_ID "
@@ -52,6 +54,7 @@ public class StudentDao extends Dao {
 			student.setName(resultSet.getString("NAME"));
 			student.setRole(resultSet.getString("ROLE"));
 			student.setPasswordInitialized(resultSet.getBoolean("PASSWORD_INITIALIZED"));
+			student.setBirthday(resultSet.getObject("BIRTHDAY", LocalDate.class));
 			student.setSchool(school);
 			// クラスに在籍していない日はnullのまま
 			if (resultSet.getObject("CLASS_ID") != null) {
@@ -140,18 +143,49 @@ public class StudentDao extends Dao {
 	}
 
 	/**
+	 * resetPasswordメソッド 学生のパスワードを生年月日（yyyyMMdd）に戻す
+	 *
+	 * USERS の PASSWORD と PASSWORD_INITIALIZED だけを更新する。
+	 * 勤務先・シフトテンプレート・シフト・報告書など、ほかのデータは変えない
+	 * 学校が同じ学生かどうかは、呼ぶ側が get(id, school) で確かめておく
+	 *
+	 * @param student:Student 学生（生年月日が必要）
+	 * @return 成功:true, 失敗（生年月日がない・学生がいない）:false
+	 * @throws Exception
+	 */
+	public boolean resetPassword(Student student) throws Exception {
+		if (student == null || student.getBirthday() == null) {
+			return false;
+		}
+		int count = 0;
+
+		try (Connection connection = getConnection();
+			 PreparedStatement statement = connection.prepareStatement(
+					 "update USERS set PASSWORD = ?, PASSWORD_INITIALIZED = false where ID = ? and ROLE = ?"
+			 ))
+		{
+			statement.setString(1, PasswordUtil.hash(student.getBirthday().format(DateTimeFormatter.BASIC_ISO_DATE)));
+			statement.setInt(2, student.getId());
+			statement.setString(3, User.ROLE_STUDENT);
+			count = statement.executeUpdate();
+		}
+
+		return count > 0;
+	}
+
+	/**
 	 * saveAllメソッド CSVの行から学生アカウントをまとめて作る
 	 * 
 	 * USERS・STUDENT・CLASS_ENROLLMENT を1つのトランザクションで登録し、
 	 * 1件でも失敗したら全部取り消す
+	 * 初期パスワードは各学生の生年月日（yyyyMMdd）をハッシュ化した値にする
 	 *
 	 * @param rows:List<ImportRow> CSVの行
 	 * @param school:School 教職員の学校
-	 * @param passwordHash:String 初期パスワードのハッシュ値
 	 * @return 作成した人数:int
 	 * @throws Exception
 	 */
-	public int saveAll(List<ImportRow> rows, School school, String passwordHash) throws Exception {
+	public int saveAll(List<ImportRow> rows, School school) throws Exception {
 		int count = 0;
 
 		try (Connection connection = getConnection()) {
@@ -165,7 +199,7 @@ public class StudentDao extends Dao {
 						Statement.RETURN_GENERATED_KEYS
 				 );
 				 PreparedStatement studentStatement = connection.prepareStatement(
-					"insert into STUDENT (USER_ID, SCHOOL_ID) values (?, ?)"
+					"insert into STUDENT (USER_ID, SCHOOL_ID, BIRTHDAY) values (?, ?, ?)"
 				 );
 				 PreparedStatement enrollmentStatement = connection.prepareStatement(
 					"insert into CLASS_ENROLLMENT (STUDENT_ID, SCHOOL_CLASS_ID, START_DATE) values (?, ?, ?)"
@@ -188,7 +222,7 @@ public class StudentDao extends Dao {
 
 					// ユーザーを登録し、自動で振られたIDを受け取る
 					userStatement.setString(1, row.getStudentNo());
-					userStatement.setString(2, passwordHash);
+					userStatement.setString(2, PasswordUtil.hash(row.getBirthday().format(DateTimeFormatter.BASIC_ISO_DATE)));
 					userStatement.setString(3, row.getName());
 					userStatement.setString(4, User.ROLE_STUDENT);
 					userStatement.executeUpdate();
@@ -199,6 +233,7 @@ public class StudentDao extends Dao {
 					// 学生とクラス在籍を登録
 					studentStatement.setInt(1, userId);
 					studentStatement.setInt(2, school.getId());
+					studentStatement.setObject(3, row.getBirthday());
 					studentStatement.executeUpdate();
 
 					enrollmentStatement.setInt(1, userId);

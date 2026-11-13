@@ -4,3 +4,29 @@
 body {
 	font-family: "Meiryo", "Hiragino Sans", sans-serif;
 }
+
+/* シフトカレンダー */
+.calendar-table td.calendar-day {
+	padding: 0.35rem 0.25rem;
+}
+.calendar-table .day-number {
+	font-size: 0.95rem;
+	margin-bottom: 0.25rem;
+}
+.calendar-table .shift-bars {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 0 2px;
+}
+.calendar-table .shift-bar {
+	height: 6px;
+	border-radius: 2px;
+}
+/* 選択中の日付：少し暗めの背景 */
+.calendar-table td.selected-day {
+	background-color: #d0d7de !important; /* グレー寄りで少し暗め */
+}
+.calendar-table td.calendar-day:hover {
+	background-color: #e9ecef;
+}
