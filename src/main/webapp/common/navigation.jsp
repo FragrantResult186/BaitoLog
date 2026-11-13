@@ -7,7 +7,7 @@
 <%--  --%>
 <c:set var="uri" value="${ requestScope[ 'jakarta.servlet.forward.request_yri']}"></c:set>
 
-<ul class="nav nav-tabs">
+<ul class="nav nav-tabs nav-justified app-tabs">
 	<c:choose>
 		<c:when test="${user.teacher}">
 			<%-- 教職員用メニュー --%>

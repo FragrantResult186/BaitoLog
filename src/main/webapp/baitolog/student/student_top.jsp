@@ -42,7 +42,7 @@
 	request.setAttribute("month", "2026-09");
 	request.setAttribute("submittedAtText", "10/15 12:23");
 	request.setAttribute("message", "9月分の報告書を提出しました");
-%>
+%> 
 
 <c:import url="/common/base.jsp">
 	<c:param name="title">
@@ -65,13 +65,13 @@
 			
 
 			<%-- 対象期間 --%>
-			<h5 class="mb-3">
+			<h5 class="mb-3 text-center">
 				直近7日間　${result.startDate.monthValue}/${result.startDate.dayOfMonth}
 				〜 ${result.endDate.monthValue}/${result.endDate.dayOfMonth}
 			</h5>
 
 			<%-- 合計と上限 --%>
-			<p class="fs-3 mb-1">
+			<p class="fs-3 mb-1 text-center fw-bold ">
 				<fmt:formatNumber value="${result.totalHours}" pattern="0.##" /> /
 				<fmt:formatNumber value="${result.limitHours}" pattern="0.##" /> 時間
 			</p>
@@ -88,7 +88,7 @@
 			</div>
 
 			<%-- 残り時間メッセージ --%>
-			<p class="mb-5 text-center border rounded fs-4 fw-bold py-3 mx-auto " style="max-width: 34rem; background: #B0E0E6;">
+			<p class="mb-5 text-center border rounded fs-4 fw-bold py-3 mx-auto text-black" style="max-width: 34rem; background: #D3DEF1;">
 				<c:choose> 
 					<c:when test="${result.over}">
 						上限を <fmt:formatNumber value="${result.overHours}" pattern="0.##" /> 時間 超えています
@@ -146,8 +146,8 @@
 					</div>
 				</c:when>
 				<c:otherwise>
-					<div class="alert alert-warning d-flex justfy-content-between align-items-center">
-						<span>${ monthLabel }の報告書：未提出 </span>
+					<div class="alert alert-warning d-flex justfy-content-between align-items-center gap-3">
+						<span>${ monthLabel }の報告書：未提出    </span>
 						<a href="ReportConfirm.action?month=${ month }" class="btn btn-warning btn-sm">提出する</a>
 					</div>
 				</c:otherwise>
