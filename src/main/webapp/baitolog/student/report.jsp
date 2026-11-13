@@ -17,8 +17,8 @@
 
 	<c:param name="scripts">
 		<style>
-			.report-page { max-width: 920px; margin: 0 auto; color: #111; }
-			.report-sheet { max-width: 820px; margin: 0 auto; padding: 0.35rem 0.75rem 1.25rem; background: #fff; }
+			.report-page { width: 100%; margin: 0; color: #111; }
+			.report-sheet { width: 100%; margin: 0; padding: 0.35rem 0 1.25rem; background: #fff; }
 			.report-print-control { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.45rem; font-size: 0.72rem; }
 			.report-print-button { border: 1px solid #0b5ed7; border-radius: 0.15rem; padding: 0.05rem 0.4rem; background: #0d6efd; color: #fff; font-size: 0.72rem; }
 			.report-title { margin: 0 0 0.35rem; padding-bottom: 0.15rem; border-bottom: 2px solid #111; font-size: 1.2rem; font-weight: 700; }
