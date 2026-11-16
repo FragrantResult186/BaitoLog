@@ -129,7 +129,7 @@
 									${ s.workDate.monthValue }/${ s.workDate.dayOfMonth }
 									${ fn:substring('月火水木金土日', s.workDate.dayOfWeek.value -1, s.workDate.dayOfWeek.value) }
 								</td>
-								<td>${ workplaceNames[ s.workplaceId ] }</td>
+								<td>${workplaceMap[s.workplaceId].displayName}</td>
 								<td>${ s.startTime } ～ ${ s.endTime }</td>
 							</tr>
 						</c:forEach>

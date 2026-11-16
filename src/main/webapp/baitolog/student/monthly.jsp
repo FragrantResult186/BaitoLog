@@ -41,7 +41,7 @@
 								${ s.workDate.monthValue }/${ s.workDate.dayOfMonth }
 								${ fn:substring('月火水木金土日', s.workDate.dayOfWeek.value - 1, s.workDate.dayOfWeek.value) }
 							</td>
-							<td>${ workplceNames[s.workplaceId] }</td>
+							<td>${empty workplaceNames[s.workplaceId] ? '勤務先不明' : workplaceNames[s.workplaceId]}</td>
 							<td class="text-secondary">${ s.startTime }～${ s.endTime }</td>
 							<td class="text-secondary">
 								<c:choose>
