@@ -6,43 +6,43 @@
 <%@ taglib prefix="fn" uri="jakarta.tags.functions"%>
 
 <%-- ★仮データ：StudentTopAction ができたらこのブロックを消す --%>
-<%
-	// 7日間の集計（勤務先ごとに足すと、合計も自動で増える）
-	bean.WindowResult dummy = new bean.WindowResult();
-	dummy.setStartDate(java.time.LocalDate.of(2026, 9, 12));
-	dummy.setEndDate(java.time.LocalDate.of(2026, 9, 18));
-	dummy.setLimitHours(28);
-	dummy.addWorkplaceHours("ローソン 北口店", 14.5);
-	dummy.addWorkplaceHours("居酒屋 とり松", 8.0);
-	request.setAttribute("result", dummy);
+<%--
+// 	// 7日間の集計（勤務先ごとに足すと、合計も自動で増える）
+// 	bean.WindowResult dummy = new bean.WindowResult();
+// 	dummy.setStartDate(java.time.LocalDate.of(2026, 9, 12));
+// 	dummy.setEndDate(java.time.LocalDate.of(2026, 9, 18));
+// 	dummy.setLimitHours(28);
+// 	dummy.addWorkplaceHours("ローソン 北口店", 14.5);
+// 	dummy.addWorkplaceHours("居酒屋 とり松", 8.0);
+// 	request.setAttribute("result", dummy);
 
-	// 勤務先ID → 表示名
-	java.util.Map<Integer, String> names = new java.util.HashMap<>();
-	names.put(1, "ローソン 北口店");
-	names.put(2, "居酒屋 とり松");
-	request.setAttribute("workplaceNames", names);
+// 	// 勤務先ID → 表示名
+// 	java.util.Map<Integer, String> names = new java.util.HashMap<>();
+// 	names.put(1, "ローソン 北口店");
+// 	names.put(2, "居酒屋 とり松");
+// 	request.setAttribute("workplaceNames", names);
 
-	// これからのシフト（{日, 勤務先ID, 開始時, 終了時}）
-	java.util.List<bean.Shift> shifts = new java.util.ArrayList<>();
-	int[][] rows = { {19, 1, 17, 22}, {20, 2, 18, 23}, {22, 1, 17, 22} };
-	for (int[] r : rows) {
-		bean.Shift s = new bean.Shift();
-		s.setId(r[0]);
-		s.setWorkplaceId(r[1]);
-		s.setWorkDate(java.time.LocalDate.of(2026, 9, r[0]));
-		s.setStartTime(java.time.LocalTime.of(r[2], 0));
-		s.setEndTime(java.time.LocalTime.of(r[3], 0));
-		shifts.add(s);
-	}
-	request.setAttribute("shifts", shifts);
+// 	// これからのシフト（{日, 勤務先ID, 開始時, 終了時}）
+// 	java.util.List<bean.Shift> shifts = new java.util.ArrayList<>();
+// 	int[][] rows = { {19, 1, 17, 22}, {20, 2, 18, 23}, {22, 1, 17, 22} };
+// 	for (int[] r : rows) {
+// 		bean.Shift s = new bean.Shift();
+// 		s.setId(r[0]);
+// 		s.setWorkplaceId(r[1]);
+// 		s.setWorkDate(java.time.LocalDate.of(2026, 9, r[0]));
+// 		s.setStartTime(java.time.LocalTime.of(r[2], 0));
+// 		s.setEndTime(java.time.LocalTime.of(r[3], 0));
+// 		shifts.add(s);
+// 	}
+// 	request.setAttribute("shifts", shifts);
 	
-	// 報告書の提出状況（false を true にすると、提出済みの表示を確認できる）
-	request.setAttribute("submitted", false);
-	request.setAttribute("monthLabel", "9月");
-	request.setAttribute("month", "2026-09");
-	request.setAttribute("submittedAtText", "10/15 12:23");
-	request.setAttribute("message", "9月分の報告書を提出しました");
-%> 
+// 	// 報告書の提出状況（false を true にすると、提出済みの表示を確認できる）
+// 	request.setAttribute("submitted", false);
+// 	request.setAttribute("monthLabel", "9月");
+// 	request.setAttribute("month", "2026-09");
+// 	request.setAttribute("submittedAtText", "10/15 12:23");
+// 	request.setAttribute("message", "9月分の報告書を提出しました");
+--%>
 
 <c:import url="/common/base.jsp">
 	<c:param name="title">
