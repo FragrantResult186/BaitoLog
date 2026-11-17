@@ -112,6 +112,11 @@ public class ShiftEditExecuteAction extends Action {
 			redirectToEdit(res, req, monthParam, id);
 			return;
 		}
+		if (!shift.isBreakWithinWork()) {
+			session.setAttribute("errorMessage", "休憩時間は勤務開始から終了までの範囲内に設定してください。");
+			redirectToEdit(res, req, monthParam, id);
+			return;
+		}
 		if (shift.getWorkHours() <= 0) {
 			session.setAttribute("errorMessage", "労働時間が0時間以下になっています。");
 			redirectToEdit(res, req, monthParam, id);

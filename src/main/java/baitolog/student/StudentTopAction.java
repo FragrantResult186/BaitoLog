@@ -53,8 +53,8 @@ public class StudentTopAction extends Action {
 		//リクエストパラメータ―の取得 2
 		// セッションのログインユーザー（★属性名 "user" は LoginAction に合わせること）
 		User user = (User) session.getAttribute("user");
-		if (!(user instanceof Student)) {
-			// 未ログイン・教職員の場合はログイン画面へ
+		if (!(user instanceof Student) || !user.isAuthenticated()) {
+			// 未ログイン・教職員・パスワード未設定の場合はログイン画面へ
 			res.sendRedirect(req.getContextPath() + "/baitolog/Login.action");
 			return;
 		}

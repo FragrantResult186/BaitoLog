@@ -118,6 +118,13 @@ public class ReportSubmitExecuteAction extends Action {
 		}
 		total = Math.round(total * 100) / 100.0;
 
+		// まだ始まっていない月は提出できない
+		if (targetMonth.isAfter(YearMonth.from(today))) {
+			session.setAttribute("errorMessage", monthLabel + "はまだ始まっていないため、提出できません。");
+			res.sendRedirect(root + "/student/StudentTop.action");
+			return;
+		}
+
 		// 勤務がない月は提出できない
 		if (items.isEmpty()) {
 			session.setAttribute("errorMessage", monthLabel + "は勤務がないため、提出できません。");

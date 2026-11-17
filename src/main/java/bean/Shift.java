@@ -96,9 +96,35 @@ public class Shift implements Serializable {
 	public double getWorkHours() {
 		long minutes = minutesBetween(startTime, endTime);
 		if (hasBreak()) {
-			minutes -= minutesBetween(breakStart, breakEnd);
+			// 勤務時間と重なっている部分だけを差し引く（勤務時間外の休憩は数えない）
+			long workMinutes = minutes;
+			long bs = minutesBetween(startTime, breakStart);
+			long be = bs + minutesBetween(breakStart, breakEnd);
+			long overlap = overlap(bs, be, workMinutes)
+					// 勤務開始より前から始まる休憩（例：勤務9:00〜、休憩8:00〜10:00）
+					+ overlap(bs - 24 * 60, be - 24 * 60, workMinutes);
+			minutes -= overlap;
 		}
 		return Math.max(0, minutes) / 60.0;
+	}
+
+	/**
+	 * 休憩が勤務開始から終了までの範囲内にあるか（休憩なしの場合は true）。
+	 * 日付をまたぐ勤務にも対応する。
+	 */
+	public boolean isBreakWithinWork() {
+		if (!hasBreak()) {
+			return true;
+		}
+		long workMinutes = minutesBetween(startTime, endTime);
+		long bs = minutesBetween(startTime, breakStart);
+		long be = minutesBetween(startTime, breakEnd);
+		return bs < be && be <= workMinutes;
+	}
+
+	/** 区間 [from, to) と [0, workMinutes) の重なり（分） */
+	private static long overlap(long from, long to, long workMinutes) {
+		return Math.max(0, Math.min(to, workMinutes) - Math.max(from, 0));
 	}
 
 	private long minutesBetween(LocalTime from, LocalTime to) {

@@ -10,8 +10,8 @@
 	<c:param name="scripts"></c:param>
 
 	<c:param name="content">
-		<section class="me-4">
-			<h2 class="h3 mb-3 fw-norma bg-secondary bg-opacity-10 py-2 px-4">新しいパスワードの登録</h2>
+		<section>
+			<h2 class="h3 mb-3 fw-normal bg-secondary bg-opacity-10 py-2 px-4">新しいパスワードの登録</h2>
 			<p class="px-4">初回ログインです。これから使う新しいパスワードを、2回入力してください。</p>
 
 			<%-- 入力に問題があるときだけ表示 --%>

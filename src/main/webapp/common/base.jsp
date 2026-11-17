@@ -19,10 +19,10 @@
 ${param.scripts}
 </head>
 <body>
-	<div id="wrapper" class="container">
+	<div id="wrapper" class="container d-flex flex-column min-vh-100">
 		
 		<%-- 変更後 --%>
-		<header class="app-header d-flex justify-content-between align-items-center">
+		<header class="app-header d-flex justify-content-between align-items-center${ user.isAuthenticated() ? '' : ' mb-4' }">
 				<c:import url="/common/header.jsp"/>
 		</header>
 		
@@ -32,7 +32,7 @@ ${param.scripts}
 			</nav>
 		</c:if>
 
-		<div class="row justify-content-center">
+		<div class="row justify-content-center mb-4">
 			<c:choose>
 				<%-- ログイン済みの場合 --%>
 				<c:when test="${user.isAuthenticated()}">
@@ -40,11 +40,11 @@ ${param.scripts}
 				</c:when>
 				<%-- 未ログインの場合 --%>
 				<c:otherwise>
-					<main class="col-8"> ${param.content} </main>
+					<main class="col-12 col-md-8 col-lg-6"> ${param.content} </main>
 				</c:otherwise>
 			</c:choose>
 		</div>
-		<footer class="py-2 my-4 bg-dark bg-opacity-10 border-top border-3 align-bottom">
+		<footer class="py-2 mt-auto mb-0 bg-dark bg-opacity-10 border-top border-3 align-bottom">
 			<c:import url="/common/footer.jsp"/>
 		</footer>
 

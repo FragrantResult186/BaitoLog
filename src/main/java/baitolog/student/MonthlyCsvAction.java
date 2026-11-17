@@ -251,6 +251,11 @@ public class MonthlyCsvAction extends Action {
             value = "";
         }
 
+        // 先頭が = + - @ の文字は、Excelで式として動かないよう ' をつける
+        if (!value.isEmpty() && "=+-@".indexOf(value.charAt(0)) >= 0) {
+            value = "'" + value;
+        }
+
         return "\""
             + value.replace("\"", "\"\"")
             + "\"";

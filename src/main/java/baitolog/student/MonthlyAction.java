@@ -214,10 +214,10 @@ public class MonthlyAction extends Action {
 
         LocalDate maxEnd = null;
 
-        // 月内の日付を含む7日間をすべて判定
+        // 月内の日で終わる7日間をすべて判定（報告書・教職員画面と同じ範囲）
         for (
             LocalDate start = searchStart;
-            !start.isAfter(monthEnd);
+            !start.plusDays(6).isAfter(monthEnd);
             start = start.plusDays(1)
         ) {
 

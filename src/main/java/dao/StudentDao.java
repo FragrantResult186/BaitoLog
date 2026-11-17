@@ -31,8 +31,11 @@ public class StudentDao extends Dao {
 			+ "CL.ID as CLASS_ID, CL.NAME as CLASS_NAME "
 			+ "from STUDENT S "
 			+ "join USERS U on U.ID = S.USER_ID "
-			+ "left join CLASS_ENROLLMENT CE on CE.STUDENT_ID = S.USER_ID "
-			+ "and CE.START_DATE <= ? and (CE.END_DATE is null or CE.END_DATE >= ?) "
+			// 在籍期間が重なっていても1人1行になるよう、開始日が最も新しい在籍だけを使う
+			+ "left join CLASS_ENROLLMENT CE on CE.ID = ("
+			+ "select CE2.ID from CLASS_ENROLLMENT CE2 where CE2.STUDENT_ID = S.USER_ID "
+			+ "and CE2.START_DATE <= ? and (CE2.END_DATE is null or CE2.END_DATE >= ?) "
+			+ "order by CE2.START_DATE desc, CE2.ID desc fetch first 1 rows only) "
 			+ "left join SCHOOL_CLASS CL on CL.ID = CE.SCHOOL_CLASS_ID "
 			+ "where S.SCHOOL_ID = ? ";
 

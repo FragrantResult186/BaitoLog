@@ -92,6 +92,19 @@ public class ShiftCheckAction extends Action {
 		candidate.setBreakStart(breakStart);
 		candidate.setBreakEnd(breakEnd);
 
+		// 保存時（ShiftEditExecuteAction）と同じ入力チェック
+		if (startTime.equals(endTime)) {
+			out.print("{\"ok\":false,\"message\":\"開始時刻と終了時刻を異なる時刻にしてください\"}");
+			return;
+		}
+		if ((breakStart == null) != (breakEnd == null)) {
+			out.print("{\"ok\":false,\"message\":\"休憩を設定する場合は、開始と終了の両方を入力してください\"}");
+			return;
+		}
+		if (!candidate.isBreakWithinWork()) {
+			out.print("{\"ok\":false,\"message\":\"休憩時間は勤務開始から終了までの範囲内に設定してください\"}");
+			return;
+		}
 		if (candidate.getWorkHours() <= 0) {
 			out.print("{\"ok\":false,\"message\":\"労働時間が0時間以下です\"}");
 			return;

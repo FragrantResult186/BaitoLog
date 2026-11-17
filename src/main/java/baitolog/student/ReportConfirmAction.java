@@ -136,7 +136,9 @@ public class ReportConfirmAction extends Action {
 
 		// 5. DBへデータ保存（「提出する」を押したときだけ）
 		if (isPost) {
-			if (items.isEmpty()) {
+			if (targetMonth.isAfter(YearMonth.from(today))) {
+				req.setAttribute("errorMessage", "まだ始まっていない月の報告書は提出できません。");
+			} else if (items.isEmpty()) {
 				req.setAttribute("errorMessage", "この月の勤務がないため、提出できません。");
 			} else if (reportDao.save(report)) {
 				session.setAttribute("message", monthLabel + "分の報告書を提出しました");

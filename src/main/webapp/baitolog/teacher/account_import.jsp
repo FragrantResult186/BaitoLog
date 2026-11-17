@@ -24,7 +24,7 @@
 
 	<c:param name="content">
 		<section class="me-4">
-			<h2 class="h3 mb-3 fw-norma bg-secondary bg-opacity-10 py-2 px-4">学生アカウント登録</h2>
+			<h2 class="h3 mb-3 fw-normal bg-secondary bg-opacity-10 py-2 px-4">学生アカウント登録</h2>
 
 			<c:if test="${not empty errorMessage}">
 				<div class="alert alert-danger mx-4" role="alert"><c:out value="${errorMessage}" /></div>
