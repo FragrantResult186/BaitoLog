@@ -59,12 +59,6 @@
 						<div class="fs-2 text-end">${noneCount}</div>
 					</div>
 				</div>
-				<div class="col-4">
-					<div class="rounded p-3 h-100 bg-light">
-						<div class="small">対象学生</div>
-						<div class="fs-2 text-end">${studentCount}</div>
-					</div>
-				</div>
 			</div>
 
 			<p class="px-4 mb-2">期間内に上限を超えた記録のある学生：${overCount} 名</p>
@@ -73,17 +67,28 @@
 				<table class="table table-sm align-middle">
 					<thead>
 						<tr>
+							<th>状態</th>
 							<th>氏名</th>
 							<th>クラス</th>
 							<th>勤務先</th>
 							<th>7日間の最大</th>
 							<th>該当期間</th>
-							<th>状態</th>
+							
 						</tr>
 					</thead>
 					<tbody>
 						<c:forEach var="s" items="${summaries}">
 							<tr>
+							
+								<td>
+									<%-- 色とアイコンの両方で状態を示す --%>
+									<c:choose>
+										<c:when test="${s.status == 'OVER'}"><span class="status-over">✖ 超過</span></c:when>
+										<c:when test="${s.status == 'CAUTION'}"><span class="status-caution">▲ 間近</span></c:when>
+										<c:when test="${s.status == 'OK'}"><span class="status-ok">✔ 上限内</span></c:when>
+										<c:otherwise><span class="status-none">ー</span></c:otherwise>
+									</c:choose>
+								</td>
 								<td>
 									<a href="StudentDetail.action?id=${s.student.id}&target_month=${targetMonth}&class_id=${selectedClassId}"><c:out value="${s.student.name}" /></a>
 								</td>
@@ -101,15 +106,7 @@
 										<td class="status-none">ー</td>
 									</c:otherwise>
 								</c:choose>
-								<td>
-									<%-- 色とアイコンの両方で状態を示す --%>
-									<c:choose>
-										<c:when test="${s.status == 'OVER'}"><span class="status-over">✖ 超過</span></c:when>
-										<c:when test="${s.status == 'CAUTION'}"><span class="status-caution">▲ 間近</span></c:when>
-										<c:when test="${s.status == 'OK'}"><span class="status-ok">✔ 上限内</span></c:when>
-										<c:otherwise><span class="status-none">ー</span></c:otherwise>
-									</c:choose>
-								</td>
+								
 							</tr>
 						</c:forEach>
 						<c:if test="${empty summaries}">

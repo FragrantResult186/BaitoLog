@@ -78,3 +78,25 @@ body {
 .calendar-table td.calendar-day:hover {
 	background-color: #e9ecef;
 }
+/* ナビゲーション（タブ）：開いている画面を目立たせる */
+.app-tabs {
+	border-bottom: 1px solid #dee2e6;
+}
+.app-tabs .nav-link {
+	color: #666;
+	text-align: center;
+	padding: 0.7rem 0;
+	border: 0;
+	border-right: 1px solid #dee2e6;
+	border-radius: 0;
+}
+.app-tabs .nav-link:hover {
+	color: #1e3a5f;
+	background: #f4f7fb;
+}
+.app-tabs .nav-link.active {
+	color: #1e3a5f;
+	font-weight: bold;
+	background: #fff;
+	border-bottom: 3px solid #1e3a5f;
+}
