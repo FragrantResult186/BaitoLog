@@ -136,19 +136,31 @@ function toTimeStr(min) {
 	return String(h).padStart(2,"0") + ":" + String(m).padStart(2,"0");
 }
 
+// 24時間表記（HH:mm）の入力チェックと整形
+function isTime(v) { return /^([01]\d|2[0-3]):[0-5]\d$/.test(v); }
+function normalizeTime(v) {
+	v = (v || "").trim().replace(/[：.]/g, ":")
+		.replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+	let m = v.match(/^(\d{1,2}):(\d{1,2})$/);
+	if (!m) m = v.match(/^(\d{1,2})(\d{2})$/);
+	if (!m && /^\d{1,2}$/.test(v)) m = [v, v, "00"];
+	if (!m) return v;
+	return m[1].padStart(2, "0") + ":" + m[2].padStart(2, "0");
+}
+
 // 労働時間計算
 function calcHours() {
 	const s = document.getElementById("start_time").value;
 	const e = document.getElementById("end_time").value;
 	const bs = document.getElementById("break_start").value;
 	const be = document.getElementById("break_end").value;
-	if (!s || !e) {
+	if (!isTime(s) || !isTime(e)) {
 		document.getElementById("work-hours").textContent = "-";
 		return;
 	}
 	let mins = toMinutes(e) - toMinutes(s);
 	if (mins < 0) mins += 24*60;
-	if (bs && be) {
+	if (isTime(bs) && isTime(be)) {
 		let bm = toMinutes(be) - toMinutes(bs);
 		if (bm < 0) bm += 24*60;
 		mins -= bm;
@@ -168,7 +180,7 @@ function checkLimit() {
 	const msg = document.getElementById("limit-message");
 	const saveBtn = document.getElementById("save-btn");
 
-	if (!date || !start || !end) {
+	if (!date || !isTime(start) || !isTime(end)) {
 		msg.textContent = "";
 		msg.className = "";
 		saveBtn.disabled = false;
@@ -177,7 +189,8 @@ function checkLimit() {
 
 	const params = new URLSearchParams({
 		date: date, start: start, end: end,
-		breakStart: breakStart, breakEnd: breakEnd, id: id
+		breakStart: isTime(breakStart) ? breakStart : "",
+		breakEnd: isTime(breakEnd) ? breakEnd : "", id: id
 	});
 
 	fetch("${pageContext.request.contextPath}/baitolog/student/ShiftCheck.action?" + params)
@@ -213,7 +226,18 @@ document.addEventListener("DOMContentLoaded", () => {
 		renderPicker(dateInput.value);
 	}
 	["start_time","end_time","break_start","break_end"].forEach(id => {
-		document.getElementById(id).addEventListener("change", () => { calcHours(); checkLimit(); });
+		const el = document.getElementById(id);
+		// 入力中：数字だけにして、3桁以上なら ":" を入れる（1730 → 17:30）
+		el.addEventListener("input", () => {
+			let v = el.value.replace(/[^0-9:]/g, "");
+			if (!v.includes(":") && v.length > 2) v = v.substring(0, 2) + ":" + v.substring(2, 4);
+			el.value = v;
+		});
+		// 入力が終わったら整える（9:0 → 09:00）して、判定する
+		el.addEventListener("change", () => {
+			el.value = normalizeTime(el.value);
+			calcHours(); checkLimit();
+		});
 	});
 	document.getElementById("workplace_id").addEventListener("change", () => { onWorkplaceChange(); checkLimit(); });
 	dateInput.addEventListener("change", () => {
@@ -221,10 +245,6 @@ document.addEventListener("DOMContentLoaded", () => {
 		checkLimit();
 	});
 });
-
-
-
-
 </script>
 	</c:param>
 
@@ -371,30 +391,37 @@ document.addEventListener("DOMContentLoaded", () => {
 										value="${editShift != null ? editShift.workDate : ''}" />
 								</div>
 
+								<%-- 時刻は24時間表記（00:00～23:59）で入力する --%>
 								<div class="row mb-3">
 									<div class="col">
-										<label class="form-label">開始</label> <input type="time"
-											name="start_time" id="start_time" class="form-control"
-											required
+										<label class="form-label" for="start_time">開始</label>
+										<input type="text" name="start_time" id="start_time" class="form-control"
+											inputmode="numeric" maxlength="5" placeholder="例 17:30" autocomplete="off"
+											required pattern="([01][0-9]|2[0-3]):[0-5][0-9]" title="24時間表記で入力してください（例 17:30）"
 											value="${editShift != null ? editShift.startTime : ''}" />
 									</div>
 									<div class="col">
-										<label class="form-label">終了</label> <input type="time"
-											name="end_time" id="end_time" class="form-control" required
+										<label class="form-label" for="end_time">終了</label>
+										<input type="text" name="end_time" id="end_time" class="form-control"
+											inputmode="numeric" maxlength="5" placeholder="例 22:00" autocomplete="off"
+											required pattern="([01][0-9]|2[0-3]):[0-5][0-9]" title="24時間表記で入力してください（例 22:00）"
 											value="${editShift != null ? editShift.endTime : ''}" />
 									</div>
 								</div>
 
 								<div class="row mb-3">
-
 									<div class="col">
-										<label class="form-label">休憩開始</label> <input type="time"
-											name="break_start" id="break_start" class="form-control"
+										<label class="form-label" for="break_start">休憩開始</label>
+										<input type="text" name="break_start" id="break_start" class="form-control"
+											inputmode="numeric" maxlength="5" placeholder="例 20:00" autocomplete="off"
+											pattern="([01][0-9]|2[0-3]):[0-5][0-9]" title="24時間表記で入力してください（例 20:00）"
 											value="${editShift != null && editShift.breakStart != null ? editShift.breakStart : ''}" />
 									</div>
 									<div class="col">
-										<label class="form-label">休憩終了</label> <input type="time"
-											name="break_end" id="break_end" class="form-control"
+										<label class="form-label" for="break_end">休憩終了</label>
+										<input type="text" name="break_end" id="break_end" class="form-control"
+											inputmode="numeric" maxlength="5" placeholder="例 20:30" autocomplete="off"
+											pattern="([01][0-9]|2[0-3]):[0-5][0-9]" title="24時間表記で入力してください（例 20:30）"
 											value="${editShift != null && editShift.breakEnd != null ? editShift.breakEnd : ''}" />
 									</div>
 								</div>
