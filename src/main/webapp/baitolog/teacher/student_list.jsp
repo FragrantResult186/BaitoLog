@@ -79,7 +79,6 @@
 					<tbody>
 						<c:forEach var="s" items="${summaries}">
 							<tr>
-							
 								<td>
 									<%-- 色とアイコンの両方で状態を示す --%>
 									<c:choose>
