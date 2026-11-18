@@ -7,7 +7,10 @@ import java.sql.Statement;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import bean.ImportRow;
 import bean.School;
@@ -31,11 +34,8 @@ public class StudentDao extends Dao {
 			+ "CL.ID as CLASS_ID, CL.NAME as CLASS_NAME "
 			+ "from STUDENT S "
 			+ "join USERS U on U.ID = S.USER_ID "
-			// 在籍期間が重なっていても1人1行になるよう、開始日が最も新しい在籍だけを使う
-			+ "left join CLASS_ENROLLMENT CE on CE.ID = ("
-			+ "select CE2.ID from CLASS_ENROLLMENT CE2 where CE2.STUDENT_ID = S.USER_ID "
-			+ "and CE2.START_DATE <= ? and (CE2.END_DATE is null or CE2.END_DATE >= ?) "
-			+ "order by CE2.START_DATE desc, CE2.ID desc fetch first 1 rows only) "
+			+ "left join CLASS_ENROLLMENT CE on CE.STUDENT_ID = S.USER_ID "
+			+ "and CE.START_DATE <= ? and (CE.END_DATE is null or CE.END_DATE >= ?) "
 			+ "left join SCHOOL_CLASS CL on CL.ID = CE.SCHOOL_CLASS_ID "
 			+ "where S.SCHOOL_ID = ? ";
 
@@ -146,6 +146,44 @@ public class StudentDao extends Dao {
 	}
 
 	/**
+	 * findByLoginIdsメソッド 学生番号から、この学校の学生を取得する（CSVの取り込みで、更新の対象を調べる）
+	 * ほかの学校の学生や、教職員のアカウントは含まれない
+	 *
+	 * @param school:School 教職員の学校
+	 * @param loginIds:List<String> 調べたい学生番号
+	 * @return 学生番号 → 学生（今日のクラスつき）:Map<String, Student>
+	 * @throws Exception
+	 */
+	public Map<String, Student> findByLoginIds(School school, List<String> loginIds) throws Exception {
+		Map<String, Student> map = new HashMap<>();
+		if (loginIds.isEmpty()) {
+			return map;
+		}
+
+		// 「?, ?, ?」を件数分つくる
+		String marks = String.join(", ", Collections.nCopies(loginIds.size(), "?"));
+		LocalDate today = LocalDate.now();
+
+		try (Connection connection = getConnection();
+			 PreparedStatement statement = connection.prepareStatement(
+					 baseSql + "and U.LOGIN_ID in (" + marks + ")"))
+		{
+			statement.setObject(1, today);
+			statement.setObject(2, today);
+			statement.setInt(3, school.getId());
+			int index = 4;
+			for (String loginId : loginIds) {
+				statement.setString(index++, loginId);
+			}
+			for (Student student : postFilter(statement.executeQuery(), school)) {
+				map.put(student.getLoginId(), student);
+			}
+		}
+
+		return map;
+	}
+
+	/**
 	 * resetPasswordメソッド 学生のパスワードを生年月日（yyyyMMdd）に戻す
 	 *
 	 * USERS の PASSWORD と PASSWORD_INITIALIZED だけを更新する。
@@ -177,19 +215,24 @@ public class StudentDao extends Dao {
 	}
 
 	/**
-	 * saveAllメソッド CSVの行から学生アカウントをまとめて作る
-	 * 
-	 * USERS・STUDENT・CLASS_ENROLLMENT を1つのトランザクションで登録し、
-	 * 1件でも失敗したら全部取り消す
-	 * 初期パスワードは各学生の生年月日（yyyyMMdd）をハッシュ化した値にする
+	 * saveAllメソッド CSVの行から、学生アカウントをまとめて登録・更新する
 	 *
-	 * @param rows:List<ImportRow> CSVの行
+	 * 行の種類（row.getKind()）で処理を分ける
+	 *   新規     ：USERS・STUDENT・CLASS_ENROLLMENT に登録する（初期パスワードは生年月日 yyyyMMdd のハッシュ値）
+	 *   更新     ：同じ学生（USERS.ID）の氏名・生年月日を更新し、クラスが変わるときは在籍の履歴を足す
+	 *              勤務先・シフト・報告書は学生IDにひもづいているので、そのまま残る。パスワードは変えない
+	 *   変更なし ：何もしない
+	 * 1つのトランザクションで行い、1件でも失敗したら全部取り消す
+	 *
+	 * @param rows:List<ImportRow> CSVの行（種類が決まっていること）
 	 * @param school:School 教職員の学校
-	 * @return 作成した人数:int
+	 * @return {新規の人数, 更新した人数}:int[]
 	 * @throws Exception
 	 */
-	public int saveAll(List<ImportRow> rows, School school) throws Exception {
-		int count = 0;
+	public int[] saveAll(List<ImportRow> rows, School school) throws Exception {
+		int created = 0;
+		int updated = 0;
+		LocalDate today = LocalDate.now();
 
 		try (Connection connection = getConnection()) {
 			// 自動コミットを止めて、最後にまとめてコミットする
@@ -206,11 +249,27 @@ public class StudentDao extends Dao {
 				 );
 				 PreparedStatement enrollmentStatement = connection.prepareStatement(
 					"insert into CLASS_ENROLLMENT (STUDENT_ID, SCHOOL_CLASS_ID, START_DATE) values (?, ?, ?)"
+				 );
+				 // ---- 更新用 ----
+				 PreparedStatement updateUserStatement = connection.prepareStatement(
+					"update USERS set NAME = ? where ID = ? and ROLE = ?"
+				 );
+				 PreparedStatement updateStudentStatement = connection.prepareStatement(
+					"update STUDENT set BIRTHDAY = ? where USER_ID = ? and SCHOOL_ID = ?"
+				 );
+				 PreparedStatement currentStatement = connection.prepareStatement(
+					"select ID, SCHOOL_CLASS_ID, START_DATE from CLASS_ENROLLMENT where STUDENT_ID = ? and END_DATE is null"
+				 );
+				 PreparedStatement moveStatement = connection.prepareStatement(
+					"update CLASS_ENROLLMENT set SCHOOL_CLASS_ID = ? where ID = ?"
+				 );
+				 PreparedStatement closeStatement = connection.prepareStatement(
+					"update CLASS_ENROLLMENT set END_DATE = ? where ID = ?"
 				 ))
 			{
 				for (ImportRow row : rows) {
-					// エラーのある行は登録しない
-					if (row.getError() != null) {
+					// エラーのある行・変更のない行は処理しない
+					if (row.getError() != null || ImportRow.KIND_UNCHANGED.equals(row.getKind())) {
 						continue;
 					}
 
@@ -223,28 +282,84 @@ public class StudentDao extends Dao {
 					}
 					int classId = classResult.getInt("ID");
 
-					// ユーザーを登録し、自動で振られたIDを受け取る
-					userStatement.setString(1, row.getStudentNo());
-					userStatement.setString(2, PasswordUtil.hash(row.getBirthday().format(DateTimeFormatter.BASIC_ISO_DATE)));
-					userStatement.setString(3, row.getName());
-					userStatement.setString(4, User.ROLE_STUDENT);
-					userStatement.executeUpdate();
-					ResultSet keys = userStatement.getGeneratedKeys();
-					keys.next();
-					int userId = keys.getInt(1);
+					if (ImportRow.KIND_UPDATE.equals(row.getKind())) {
+						// ---- 更新：同じ学生の情報を書き換える（IDは変えないので、シフトなどの記録は残る） ----
 
-					// 学生とクラス在籍を登録
-					studentStatement.setInt(1, userId);
-					studentStatement.setInt(2, school.getId());
-					studentStatement.setObject(3, row.getBirthday());
-					studentStatement.executeUpdate();
+						// 生年月日（この学校の学生でなければ0件になるので、ほかの学校の学生は書き換えられない）
+						updateStudentStatement.setObject(1, row.getBirthday());
+						updateStudentStatement.setInt(2, row.getUserId());
+						updateStudentStatement.setInt(3, school.getId());
+						if (updateStudentStatement.executeUpdate() == 0) {
+							throw new Exception(row.getLineNo() + "行目：この学校の学生ではありません");
+						}
 
-					enrollmentStatement.setInt(1, userId);
-					enrollmentStatement.setInt(2, classId);
-					enrollmentStatement.setObject(3, LocalDate.now());
-					enrollmentStatement.executeUpdate();
+						// 氏名
+						updateUserStatement.setString(1, row.getName());
+						updateUserStatement.setInt(2, row.getUserId());
+						updateUserStatement.setString(3, User.ROLE_STUDENT);
+						if (updateUserStatement.executeUpdate() == 0) {
+							throw new Exception(row.getLineNo() + "行目：学生が見つかりません");
+						}
 
-					count++;
+						// クラス（変わるときだけ）
+						currentStatement.setInt(1, row.getUserId());
+						ResultSet current = currentStatement.executeQuery();
+						if (current.next()) {
+							int enrollmentId = current.getInt("ID");
+							int currentClassId = current.getInt("SCHOOL_CLASS_ID");
+							LocalDate start = current.getObject("START_DATE", LocalDate.class);
+							if (currentClassId != classId) {
+								if (!start.isBefore(today)) {
+									// 今日から始まった在籍は、履歴を足さずにクラスだけ直す（終了日が開始日より前になるのを避ける）
+									moveStatement.setInt(1, classId);
+									moveStatement.setInt(2, enrollmentId);
+									moveStatement.executeUpdate();
+								} else {
+									// いまの在籍を前日で閉じて、新しいクラスの在籍を今日から足す（クラス替えの履歴が残る）
+									closeStatement.setObject(1, today.minusDays(1));
+									closeStatement.setInt(2, enrollmentId);
+									closeStatement.executeUpdate();
+									enrollmentStatement.setInt(1, row.getUserId());
+									enrollmentStatement.setInt(2, classId);
+									enrollmentStatement.setObject(3, today);
+									enrollmentStatement.executeUpdate();
+								}
+							}
+						} else {
+							// どのクラスにも在籍していない学生は、新しく在籍を足す
+							enrollmentStatement.setInt(1, row.getUserId());
+							enrollmentStatement.setInt(2, classId);
+							enrollmentStatement.setObject(3, today);
+							enrollmentStatement.executeUpdate();
+						}
+
+						updated++;
+					} else {
+						// ---- 新規：これまでどおり登録する ----
+
+						// ユーザーを登録し、自動で振られたIDを受け取る
+						userStatement.setString(1, row.getStudentNo());
+						userStatement.setString(2, PasswordUtil.hash(row.getBirthday().format(DateTimeFormatter.BASIC_ISO_DATE)));
+						userStatement.setString(3, row.getName());
+						userStatement.setString(4, User.ROLE_STUDENT);
+						userStatement.executeUpdate();
+						ResultSet keys = userStatement.getGeneratedKeys();
+						keys.next();
+						int userId = keys.getInt(1);
+
+						// 学生とクラス在籍を登録
+						studentStatement.setInt(1, userId);
+						studentStatement.setInt(2, school.getId());
+						studentStatement.setObject(3, row.getBirthday());
+						studentStatement.executeUpdate();
+
+						enrollmentStatement.setInt(1, userId);
+						enrollmentStatement.setInt(2, classId);
+						enrollmentStatement.setObject(3, today);
+						enrollmentStatement.executeUpdate();
+
+						created++;
+					}
 				}
 				// 全部成功したらコミット
 				connection.commit();
@@ -255,6 +370,6 @@ public class StudentDao extends Dao {
 			}
 		}
 
-		return count;
+		return new int[] { created, updated };
 	}
 }

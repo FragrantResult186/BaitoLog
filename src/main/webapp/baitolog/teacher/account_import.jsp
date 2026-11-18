@@ -37,6 +37,7 @@
 					<ul class="px-5 small text-muted">
 						<li>1行目は見出しにしてください。「氏名」「学生番号」「クラス」「生年月日」の列が必要です（列の順番は問いません）。</li>
 						<li>生年月日が最初のパスワードになります（例：2006年10月4日 → 20061004）。</li>
+						<li>すでに登録されている学生番号は、氏名・クラス・生年月日が違うときに、その学生の情報を更新します（パスワードや、これまでのシフトなどの記録は、そのままです）。</li>
 						<li>この画面では、まだ登録されません。エラーがあれば、エラーの行だけ表示します（直してから、もう一度読み込んでください）。</li>
 					</ul>
 					<form method="post" enctype="multipart/form-data" action="AccountImport.action" class="px-4">
@@ -93,12 +94,14 @@
 						</c:when>
 						<c:otherwise>
 							<p class="px-4">
-								<c:out value="${fileName}" />　を読み込みました。エラーはありません（${rowCount} 人）。内容を確認してください。
+								<c:out value="${fileName}" />　を読み込みました。エラーはありません（${rowCount} 人）。内容を確認してください。<br>
+								新規登録 <strong>${newCount}</strong> 人 ／ 更新 <strong>${updateCount}</strong> 人 ／ 変更なし ${unchangedCount} 人
 							</p>
 							<div class="px-4">
 								<table class="table table-sm align-middle">
 									<thead>
 										<tr>
+											<th>種類</th>
 											<th>クラス</th>
 											<th>学生番号</th>
 											<th>氏名</th>
@@ -107,11 +110,40 @@
 									</thead>
 									<tbody>
 										<c:forEach var="row" items="${rows}">
-											<tr>
-												<td><c:out value="${row.className}" /></td>
+											<tr class="${row.kind == 'UPDATE' ? 'table-warning' : (row.kind == 'UNCHANGED' ? 'text-muted' : '')}">
+												<td>
+													<c:choose>
+														<c:when test="${row.kind == 'UPDATE'}">更新</c:when>
+														<c:when test="${row.kind == 'UNCHANGED'}">変更なし</c:when>
+														<c:otherwise>新規</c:otherwise>
+													</c:choose>
+												</td>
+												<%-- 更新の行は、変わるところを「変更前 → 変更後」で見せる --%>
+												<td>
+													<c:choose>
+														<c:when test="${row.kind == 'UPDATE' and row.classChanged}">
+															<c:out value="${empty row.oldClassName ? '（未所属）' : row.oldClassName}" /> → <strong><c:out value="${row.className}" /></strong>
+														</c:when>
+														<c:otherwise><c:out value="${row.className}" /></c:otherwise>
+													</c:choose>
+												</td>
 												<td><c:out value="${row.studentNo}" /></td>
-												<td><c:out value="${row.name}" /></td>
-												<td><c:out value="${row.birthday}" /></td>
+												<td>
+													<c:choose>
+														<c:when test="${row.kind == 'UPDATE' and row.nameChanged}">
+															<c:out value="${row.oldName}" /> → <strong><c:out value="${row.name}" /></strong>
+														</c:when>
+														<c:otherwise><c:out value="${row.name}" /></c:otherwise>
+													</c:choose>
+												</td>
+												<td>
+													<c:choose>
+														<c:when test="${row.kind == 'UPDATE' and row.birthdayChanged}">
+															<c:out value="${empty row.oldBirthday ? '（未登録）' : row.oldBirthday}" /> → <strong><c:out value="${row.birthday}" /></strong>
+														</c:when>
+														<c:otherwise><c:out value="${row.birthday}" /></c:otherwise>
+													</c:choose>
+												</td>
 											</tr>
 										</c:forEach>
 									</tbody>
@@ -122,11 +154,18 @@
 									<input type="hidden" name="action" value="back">
 									<button type="submit" class="btn btn-outline-secondary">やり直す</button>
 								</form>
-								<form method="post" action="AccountImport.action">
-									<input type="hidden" name="action" value="confirm">
-									<input type="hidden" name="token" value="<c:out value='${token}' />">
-									<button type="submit" class="btn btn-primary">次へ（登録の最終確認）</button>
-								</form>
+								<c:choose>
+									<c:when test="${newCount + updateCount > 0}">
+										<form method="post" action="AccountImport.action">
+											<input type="hidden" name="action" value="confirm">
+											<input type="hidden" name="token" value="<c:out value='${token}' />">
+											<button type="submit" class="btn btn-primary">次へ（登録・更新の最終確認）</button>
+										</form>
+									</c:when>
+									<c:otherwise>
+										<span class="text-muted align-self-center">登録・更新する学生がいません（すべて登録済みで、変更がありません）</span>
+									</c:otherwise>
+								</c:choose>
 							</div>
 						</c:otherwise>
 					</c:choose>
@@ -135,8 +174,9 @@
 				<%-- 3. 登録の最終確認 --%>
 				<c:when test="${mode == 'confirm'}">
 					<div class="alert alert-warning mx-4" role="alert">
-						<strong>${okCount} 人</strong>のアカウントを登録します。<br>
-						最初のパスワードは、各学生の生年月日（例：20061004）です。登録したあとは取り消せません。
+						新規 <strong>${newCount} 人</strong>のアカウントを登録し、<strong>${updateCount} 人</strong>の情報（氏名・クラス・生年月日）を更新します。<br>
+						新規の学生の最初のパスワードは、生年月日（例：20061004）です。更新する学生のパスワードや、これまでのシフト・勤務先などの記録は変わりません。<br>
+						登録・更新したあとは取り消せません。
 					</div>
 					<div class="d-flex gap-2 px-4">
 						<form method="post" action="AccountImport.action">
@@ -147,7 +187,7 @@
 						<form method="post" action="AccountImport.action" data-once>
 							<input type="hidden" name="action" value="register">
 							<input type="hidden" name="token" value="<c:out value='${token}' />">
-							<button type="submit" class="btn btn-danger">登録する</button>
+							<button type="submit" class="btn btn-danger">登録・更新する</button>
 						</form>
 					</div>
 				</c:when>
@@ -155,11 +195,11 @@
 				<%-- 4. 結果 --%>
 				<c:when test="${mode == 'result'}">
 					<div class="alert alert-success mx-4" role="alert">
-						<strong>${createdCount} 人</strong>のアカウントを登録しました。<br>
-						学生は、学生番号と生年月日（例：20061004）でログインし、新しいパスワードを登録します。
+						新規 <strong>${createdCount} 人</strong>のアカウントを登録し、<strong>${updatedCount} 人</strong>の情報を更新しました。<br>
+						新規の学生は、学生番号と生年月日（例：20061004）でログインし、新しいパスワードを登録します。
 					</div>
 					<div class="px-4">
-						<a href="AccountImport.action" class="btn btn-outline-primary">続けて登録する</a>
+						<a href="AccountImport.action" class="btn btn-outline-primary">続けて登録・更新する</a>
 					</div>
 				</c:when>
 			</c:choose>

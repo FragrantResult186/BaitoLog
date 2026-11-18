@@ -7,12 +7,14 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
 import bean.ImportRow;
 import bean.School;
 import bean.SchoolClass;
+import bean.Student;
 import bean.Teacher;
 import bean.User;
 import dao.SchoolClassDao;
@@ -28,6 +30,7 @@ import tool.Action;
 /**
  * 学生アカウント一括登録（教職員）
  * 学校の学生ファイル（CSV・xlsx）を読み込み、確認しながら登録する。初期パスワードは生年月日（yyyyMMdd）
+ * すでに登録されている学生番号は、氏名・クラス・生年月日が違えば更新する（シフトなどの記録は残り、パスワードも変えない）
  *
  * 画面の流れ（どの段階も確認してから次へ進む）
  *   1. アップロード   GET                       ファイルを選ぶ
@@ -46,6 +49,7 @@ public class AccountImportAction extends Action {
 	private static final String S_TOKEN = "importToken";
 	private static final String S_FILE = "importFileName";
 	private static final String S_CREATED = "importCreated";
+	private static final String S_UPDATED = "importUpdated";
 
 	@Override
 	public void execute(HttpServletRequest req, HttpServletResponse res) throws Exception {
@@ -90,8 +94,11 @@ public class AccountImportAction extends Action {
 				return;
 			}
 			mode = "result";
+			Object updated = session.getAttribute(S_UPDATED);
 			req.setAttribute("createdCount", created);
+			req.setAttribute("updatedCount", updated == null ? 0 : updated);
 			session.removeAttribute(S_CREATED);
+			session.removeAttribute(S_UPDATED);
 		} else if ("check".equals(action)) {
 			// 2 ファイルを読み込んで、内容を確認する画面へ
 			clearImport(session);
@@ -109,7 +116,7 @@ public class AccountImportAction extends Action {
 					data = in.readNBytes(ImportFileReader.MAX_BYTES + 1);
 				}
 				rows = ImportFileReader.read(data, fileName);
-				checkRows(rows, school, userDao, schoolClassDao);
+				checkRows(rows, school, userDao, schoolClassDao, studentDao);
 				if (countErrors(rows) > 0) {
 					// エラーがあるときは、ファイルを直しやすいよう行の順に並べる
 					rows.sort(Comparator.comparingInt(ImportRow::getLineNo));
@@ -139,13 +146,17 @@ public class AccountImportAction extends Action {
 				fileName = (String) session.getAttribute(S_FILE);
 				int errorsBefore = countErrors(rows);
 				// 登録直前にもう一度、DBの状態と照らし合わせる
-				checkRows(rows, school, userDao, schoolClassDao);
+				checkRows(rows, school, userDao, schoolClassDao, studentDao);
 				if (countErrors(rows) != errorsBefore) {
 					errorMessage = "登録済みのデータが変わったため、もう一度内容を確認してください";
 					mode = "preview";
 				} else if (countErrors(rows) > 0) {
 					// エラーが1行でもあるファイルは、次へ進めない（ファイルを直して読み込み直す）
 					errorMessage = "エラーがあるため進めません。ファイルを直して、もう一度読み込んでください";
+					mode = "preview";
+				} else if (!"preview".equals(action) && countChanges(rows) == 0) {
+					// 全員が「変更なし」のときは、登録・更新するものがない
+					errorMessage = "登録・更新する学生がいません（すべて登録済みで、変更がありません）";
 					mode = "preview";
 				} else if ("preview".equals(action)) {
 					// 最終確認から内容の確認へ戻る
@@ -156,8 +167,9 @@ public class AccountImportAction extends Action {
 					// 5 登録（同じ確認内容では二度登録できないよう、先にセッションから外す）
 					clearImport(session);
 					try {
-						int created = studentDao.saveAll(rows, school);
-						session.setAttribute(S_CREATED, created);
+						int[] saved = studentDao.saveAll(rows, school);
+						session.setAttribute(S_CREATED, saved[0]);
+						session.setAttribute(S_UPDATED, saved[1]);
 						mode = "done-redirect";
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -182,6 +194,9 @@ public class AccountImportAction extends Action {
 			req.setAttribute("rowCount", rows.size());
 			req.setAttribute("errorCount", errorCount);
 			req.setAttribute("okCount", rows.size() - errorCount);
+			req.setAttribute("newCount", countKind(rows, ImportRow.KIND_NEW));
+			req.setAttribute("updateCount", countKind(rows, ImportRow.KIND_UPDATE));
+			req.setAttribute("unchangedCount", countKind(rows, ImportRow.KIND_UNCHANGED));
 			req.setAttribute("fileName", fileName);
 			req.setAttribute("token", session.getAttribute(S_TOKEN));
 			req.setAttribute("errorMessage", errorMessage);
@@ -196,15 +211,19 @@ public class AccountImportAction extends Action {
 	}
 
 	/**
-	 * checkRowsメソッド DBの状態と照らし合わせて、各行の error を決める
+	 * checkRowsメソッド DBの状態と照らし合わせて、各行の error と、種類（新規・更新・変更なし）を決める
 	 * ファイルの中の問題（空欄・生年月日）は ImportFileReader が先に error に入れている
 	 * （すでに error がある行は、最初の理由を残す）
+	 *
+	 * 学生番号がすでに登録されているとき
+	 *   自分の学校の学生 → 氏名・クラス・生年月日が同じなら「変更なし」、違えば「更新」
+	 *   ほかの学校の学生・教職員のアカウント → エラー（書き換えさせない）
 	 *
 	 * @param rows:List<ImportRow> 行
 	 * @param school:School 教職員の学校
 	 */
-	private void checkRows(List<ImportRow> rows, School school, UserDao userDao, SchoolClassDao schoolClassDao)
-			throws Exception {
+	private void checkRows(List<ImportRow> rows, School school, UserDao userDao, SchoolClassDao schoolClassDao,
+			StudentDao studentDao) throws Exception {
 		// 学生番号が重なっている行、同じ人（氏名と生年月日が同じ）が2回ある行を調べる
 		Map<String, List<Integer>> noLines = new HashMap<>();
 		Map<String, List<Integer>> personLines = new HashMap<>();
@@ -216,7 +235,7 @@ public class AccountImportAction extends Action {
 			}
 		}
 
-		// すでに登録されている学生番号
+		// すでに登録されている学生番号（学校・権限を問わない）
 		List<String> numbers = new ArrayList<>();
 		for (ImportRow row : rows) {
 			if (!row.getStudentNo().isEmpty()) {
@@ -224,6 +243,8 @@ public class AccountImportAction extends Action {
 			}
 		}
 		Set<String> registered = new HashSet<>(userDao.filterLoginIds(numbers));
+		// そのうち、自分の学校の学生（更新の対象。今日のクラスつき）
+		Map<String, Student> own = studentDao.findByLoginIds(school, numbers);
 
 		// 学校にあるクラスの名前
 		Set<String> classNames = new HashSet<>();
@@ -237,6 +258,12 @@ public class AccountImportAction extends Action {
 			}
 			// 前回の照合の結果は消して、やり直す
 			row.setError(null);
+			row.setKind(null);
+			row.setUserId(0);
+			row.setOldName(null);
+			row.setOldClassName(null);
+			row.setOldBirthday(null);
+
 			List<Integer> sameNo = noLines.get(row.getStudentNo());
 			List<Integer> samePerson = row.getBirthday() == null ? null
 					: personLines.get(row.getName().replace(" ", "").replace("\u3000", "") + "|" + row.getBirthday());
@@ -244,10 +271,27 @@ public class AccountImportAction extends Action {
 				row.setError("学生番号が重複しています（" + lineText(sameNo) + "）");
 			} else if (samePerson != null && samePerson.size() > 1) {
 				row.setError("同じ学生が重複しています（氏名と生年月日が同じ：" + lineText(samePerson) + "）");
-			} else if (registered.contains(row.getStudentNo())) {
-				row.setError("この学生番号はすでに登録されています");
+			} else if (registered.contains(row.getStudentNo()) && !own.containsKey(row.getStudentNo())) {
+				row.setError("この学生番号は、ほかの学校またはほかのアカウントで使われています");
 			} else if (!classNames.contains(row.getClassName())) {
 				row.setError("クラス「" + row.getClassName() + "」が学校に登録されていません");
+			} else {
+				Student current = own.get(row.getStudentNo());
+				if (current == null) {
+					// まだ登録されていない学生番号
+					row.setKind(ImportRow.KIND_NEW);
+				} else {
+					// 登録済みの学生：変わるところがあるか調べる
+					String oldClassName = current.getSchoolClass() == null ? null : current.getSchoolClass().getName();
+					row.setUserId(current.getId());
+					row.setOldName(current.getName());
+					row.setOldClassName(oldClassName);
+					row.setOldBirthday(current.getBirthday());
+					boolean same = Objects.equals(current.getName(), row.getName())
+							&& Objects.equals(oldClassName, row.getClassName())
+							&& Objects.equals(current.getBirthday(), row.getBirthday());
+					row.setKind(same ? ImportRow.KIND_UNCHANGED : ImportRow.KIND_UPDATE);
+				}
 			}
 		}
 	}
@@ -283,6 +327,26 @@ public class AccountImportAction extends Action {
 			}
 		}
 		return n;
+	}
+
+	/**
+	 * エラーのない行のうち、指定した種類（新規・更新・変更なし）の行数
+	 */
+	private int countKind(List<ImportRow> rows, String kind) {
+		int n = 0;
+		for (ImportRow row : rows) {
+			if (row.getError() == null && kind.equals(row.getKind())) {
+				n++;
+			}
+		}
+		return n;
+	}
+
+	/**
+	 * 登録・更新する行数（新規 + 更新）
+	 */
+	private int countChanges(List<ImportRow> rows) {
+		return countKind(rows, ImportRow.KIND_NEW) + countKind(rows, ImportRow.KIND_UPDATE);
 	}
 
 	/**
