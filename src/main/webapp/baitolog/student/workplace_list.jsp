@@ -11,7 +11,6 @@
 
 	<c:param name="content">
 		<section class="me-lg-4">
-			<h2 class="h3 mb-3 fw-normal bg-secondary bg-opacity-10 py-2 px-4">勤務先</h2>
 
 			<c:if test="${isSaved}">
 				<div class="alert alert-success mx-3 mx-md-4" role="alert">保存しました</div>

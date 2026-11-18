@@ -2,7 +2,6 @@ package baitolog.student;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -15,18 +14,15 @@ import bean.Student;
 import bean.User;
 import bean.WindowResult;
 import bean.Workplace;
-
 import dao.LongBreakDao;
 import dao.ShiftDao;
 import dao.WorkplaceDao;
-
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-
 import logic.LimitPolicy;
 import logic.SevenDayJudge;
-
+import logic.TargetMonth;
 import tool.Action;
 
 /**
@@ -286,6 +282,8 @@ public class MonthlyAction extends Action {
             "month",
             targetMonth.toString()
         );
+        
+        req.setAttribute("months", TargetMonth.options(LocalDate.now()));
 
         req.setAttribute(
             "monthLabel",

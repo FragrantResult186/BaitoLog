@@ -17,10 +17,9 @@
 			<%-- 対象年月 --%>
 			<select class="form-select w-auto mb-4" name="target_month"
 				onchange="location.href = 'Monthly.action?month=' + this.value;">
-				<c:forEach var="i" begin="0" end="12">
-					<c:set var="m" value="${ summary.month.plusMonths(i - 6) }"></c:set>
-					<option value="${m.year}-${m.monthValue lt 10 ? '0' : ''}${m.monthValue}" ${i == 6 ? 'selected' : ''}>${m.year}年${m.monthValue}月</option>
-				</c:forEach>
+					<c:forEach var="m" items="${months}">
+						<option value="${m}" ${month == m.toString() ? 'selected' : ''}>${m.year}年${m.monthValue}月</option>
+					</c:forEach>
 			</select>
 			
 			<%-- 勤務記録一覧 --%>
