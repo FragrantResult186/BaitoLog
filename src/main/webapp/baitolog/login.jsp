@@ -10,8 +10,8 @@
 	<c:param name="scripts"></c:param>
 
 	<c:param name="content">
-		<section>
-			<h2 class="h3 mb-3 fw-normal bg-secondary bg-opacity-10 py-2 px-4">ログイン</h2>
+		<section class="me-4">
+			<h2 class="h3 mb-3 fw-norma bg-secondary bg-opacity-10 py-2 px-4">ログイン</h2>
 
 			<%-- 認証に失敗したときだけ表示 --%>
 			<c:if test="${not empty errorMessage}">
@@ -32,7 +32,7 @@
 				<div class="d-grid gap-2">
 					<button type="submit" class="btn btn-primary">ログイン</button>
 					<%-- 新規登録画面ができたら有効になる --%>
-					<a class="btn btn-outline-primary" href="Signup.action">新規登録</a>
+					<button type="button" class="btn btn-outline-primary" disabled title="BaitoLog 2.0で対応予定">新規登録（準備中）</button>
 				</div>
 			</form>
 		</section>
