@@ -25,14 +25,36 @@
 			.day-label { font-size: 0.65rem; text-align: center; line-height: 1.6; }
 			.day-label.sat { color: #0d6efd; }
 			.day-label.sun { color: #dc3545; }
+
+			/* パスワードリセットの確認ポップアップ */
+			.pop-overlay { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center;
+				padding: 1rem; background: rgba(37, 50, 75, 0.35); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+			.pop-card { width: 100%; max-width: 420px; background: #fff; border-radius: 4px; padding: 1.75rem 1.75rem 1.5rem;
+				box-shadow: 0 8px 28px rgba(37, 50, 75, 0.25); }
+			.pop-icon { width: 36px; height: 36px; border-radius: 50%; border: 2px solid #dc3545; color: #dc3545;
+				display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.2rem; margin-bottom: 1rem; }
+			.pop-title { font-size: 1.15rem; font-weight: 700; margin-bottom: .5rem; }
+			.pop-text { font-size: .95rem; margin-bottom: 1.25rem; }
+			.pop-actions { display: flex; align-items: center; gap: 1rem; }
 		</style>
 		<script>
-			// 「リセットする」を押したら、二重に押せないようにする
 			document.addEventListener("DOMContentLoaded", function() {
+				// 「リセットする」を押したら、二重に押せないようにする
 				var form = document.getElementById("resetExecuteForm");
 				if (form) {
 					form.addEventListener("submit", function() {
 						form.querySelector("button[type=submit]").disabled = true;
+					});
+				}
+				// ポップアップ：外側を押す・Escキーで「やめる」と同じ
+				var overlay = document.getElementById("resetPopup");
+				var cancel = document.getElementById("resetCancelButton");
+				if (overlay && cancel) {
+					overlay.addEventListener("click", function(e) {
+						if (e.target === overlay) { cancel.click(); }
+					});
+					document.addEventListener("keydown", function(e) {
+						if (e.key === "Escape") { cancel.click(); }
 					});
 				}
 			});
@@ -150,30 +172,43 @@
 				<a href="StudentDetail.action?${baseQuery}&center=${center}&csv=1" class="btn btn-outline-secondary">CSV出力</a>
 			</div>
 
-			<%-- パスワードのリセット（学生がパスワードを忘れたとき。一番下に置く） --%>
+			<%-- パスワードのリセット・学生の削除（一番下に置く） --%>
 			<hr class="mx-4">
 			<div id="reset" class="px-4 mb-5">
-				<h3 class="h5">パスワードのリセット</h3>
-				<p class="small text-muted mb-2">
-					パスワードを<strong>生年月日（例：20061004）</strong>に戻します。
-					勤務先・シフトテンプレート・シフトなどのデータは消えません。学生は、生年月日でログインしたあと、新しいパスワードを登録し直します。
-				</p>
 				<c:choose>
 					<c:when test="${!canReset}">
-						<p class="text-danger mb-0">この学生は生年月日が登録されていないため、リセットできません。</p>
+						<p class="text-danger mb-2">この学生は生年月日が登録されていないため、リセットできません。</p>
+						<a href="StudentDelete.action?id=${student.id}" class="btn btn-danger">学生を削除</a>
 					</c:when>
-					<c:when test="${resetStep == 'confirm'}">
-						<div class="alert alert-warning" role="alert">
-							<strong><c:out value="${student.name}" />（<c:out value="${student.loginId}" />）</strong>のパスワードを、生年月日に戻します。よろしいですか？
-						</div>
+					<c:otherwise>
 						<div class="d-flex gap-2">
 							<form method="post" action="StudentDetail.action#reset">
 								<input type="hidden" name="id" value="${student.id}">
 								<input type="hidden" name="target_month" value="${targetMonth}">
 								<input type="hidden" name="class_id" value="<c:out value='${classId}' />">
 								<input type="hidden" name="center" value="${center}">
-								<button type="submit" class="btn btn-outline-secondary">やめる</button>
+								<input type="hidden" name="reset_step" value="confirm">
+								<button type="submit" class="btn btn-outline-danger">パスワードをリセット</button>
 							</form>
+							<a href="StudentDelete.action?id=${student.id}" class="btn btn-danger">学生を削除</a>
+						</div>
+					</c:otherwise>
+				</c:choose>
+			</div>
+
+			<%-- ===== パスワードリセットの確認ポップアップ（「パスワードをリセット」を押すと出る） ===== --%>
+			<c:if test="${canReset && resetStep == 'confirm'}">
+				<div class="pop-overlay" id="resetPopup" role="dialog" aria-modal="true" aria-labelledby="resetPopupTitle">
+					<div class="pop-card">
+						<div class="pop-icon" aria-hidden="true">!</div>
+						<div class="pop-title" id="resetPopupTitle">パスワードのリセット</div>
+						<p class="pop-text">
+							<strong><c:out value="${student.name}" />（<c:out value="${student.loginId}" />）</strong>のパスワードを、生年月日に戻します。よろしいですか？				
+							<p class="small text-muted mb-2">
+								勤務先・シフトテンプレート・シフトなどのデータは消えません。学生は、生年月日でログインしたあと、新しいパスワードを登録し直します。
+							</p>
+						</p>
+						<div class="pop-actions">
 							<form id="resetExecuteForm" method="post" action="StudentDetail.action">
 								<input type="hidden" name="id" value="${student.id}">
 								<input type="hidden" name="target_month" value="${targetMonth}">
@@ -183,20 +218,17 @@
 								<input type="hidden" name="token" value="<c:out value='${token}' />">
 								<button type="submit" class="btn btn-danger">リセットする</button>
 							</form>
+							<form method="post" action="StudentDetail.action">
+								<input type="hidden" name="id" value="${student.id}">
+								<input type="hidden" name="target_month" value="${targetMonth}">
+								<input type="hidden" name="class_id" value="<c:out value='${classId}' />">
+								<input type="hidden" name="center" value="${center}">
+								<button type="submit" id="resetCancelButton" class="btn btn-link text-secondary text-decoration-none p-0">やめる</button>
+							</form>
 						</div>
-					</c:when>
-					<c:otherwise>
-						<form method="post" action="StudentDetail.action#reset">
-							<input type="hidden" name="id" value="${student.id}">
-							<input type="hidden" name="target_month" value="${targetMonth}">
-							<input type="hidden" name="class_id" value="<c:out value='${classId}' />">
-							<input type="hidden" name="center" value="${center}">
-							<input type="hidden" name="reset_step" value="confirm">
-							<button type="submit" class="btn btn-outline-danger">パスワードをリセット</button>
-						</form>
-					</c:otherwise>
-				</c:choose>
-			</div>
+					</div>
+				</div>
+			</c:if>
 		</section>
 	</c:param>
 </c:import>
