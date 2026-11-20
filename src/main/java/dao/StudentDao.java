@@ -20,9 +20,7 @@ import bean.User;
 import logic.PasswordUtil;
 
 /**
- * 
  * 学生（STUDENT・CLASS_ENROLLMENT）を扱うDao
- * 
  */
 public class StudentDao extends Dao {
 
@@ -371,5 +369,74 @@ public class StudentDao extends Dao {
 		}
 
 		return new int[] { created, updated };
+	}
+
+	/**
+	 * deleteStudentメソッド 学生とその学生のデータを、すべて削除する
+	 *
+	 * 削除理由は STUDENT_DELETE_LOG に残す（学生番号・名前・学校・理由・削除した教職員・日時）。
+	 * 外部キーの順に、報告書の明細 → 報告書 → シフト → シフトテンプレート → 勤務先
+	 * → クラス在籍 → 学生 → ユーザー の順に削除する。
+	 * 1つのトランザクションで行い、途中で失敗したら全部取り消す（中途半端に残らない）
+	 * 学校が同じ学生かどうかは、呼ぶ側が get(id, school) で確かめておく
+	 *
+	 * @param student:Student 削除する学生
+	 * @param reason:String 削除の理由
+	 * @param teacherId:int 削除する教職員のユーザーID
+	 * @return 成功:true, 失敗（学生がいない）:false
+	 * @throws Exception
+	 */
+	public boolean deleteStudent(Student student, String reason, int teacherId) throws Exception {
+		if (student == null) {
+			return false;
+		}
+		int id = student.getId();
+		int count = 0;
+
+		try (Connection connection = getConnection()) {
+			connection.setAutoCommit(false);
+			try {
+				// 先に理由を記録する（同じトランザクションなので、削除が失敗すれば記録も残らない）
+				try (PreparedStatement statement = connection.prepareStatement(
+						"insert into STUDENT_DELETE_LOG (LOGIN_ID, NAME, SCHOOL_ID, REASON, DELETED_BY) values (?, ?, ?, ?, ?)")) {
+					statement.setString(1, student.getLoginId());
+					statement.setString(2, student.getName());
+					statement.setInt(3, student.getSchool().getId());
+					statement.setString(4, reason);
+					statement.setInt(5, teacherId);
+					statement.executeUpdate();
+				}
+
+				// 子のデータから順に削除する
+				executeDelete(connection,
+						"delete from REPORT_ITEM where REPORT_ID in (select ID from REPORT where STUDENT_ID = ?)", id);
+				executeDelete(connection, "delete from REPORT where STUDENT_ID = ?", id);
+				executeDelete(connection, "delete from SHIFT where STUDENT_ID = ?", id);
+				executeDelete(connection,
+						"delete from SHIFT_TEMPLATE where WORKPLACE_ID in (select ID from WORKPLACE where STUDENT_ID = ?)", id);
+				executeDelete(connection, "delete from WORKPLACE where STUDENT_ID = ?", id);
+				executeDelete(connection, "delete from CLASS_ENROLLMENT where STUDENT_ID = ?", id);
+				executeDelete(connection, "delete from STUDENT where USER_ID = ?", id);
+				count = executeDelete(connection, "delete from USERS where ID = ? and ROLE = '" + User.ROLE_STUDENT + "'", id);
+
+				if (count == 0) {
+					connection.rollback();
+					return false;
+				}
+				connection.commit();
+			} catch (Exception e) {
+				connection.rollback();
+				throw e;
+			}
+		}
+
+		return true;
+	}
+
+	private int executeDelete(Connection connection, String sql, int id) throws Exception {
+		try (PreparedStatement statement = connection.prepareStatement(sql)) {
+			statement.setInt(1, id);
+			return statement.executeUpdate();
+		}
 	}
 }
