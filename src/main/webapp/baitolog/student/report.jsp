@@ -49,13 +49,15 @@
 				.report-meta { grid-template-columns: 1fr; gap: 0.15rem; }
 				.report-table { font-size: 0.62rem; }
 			}
-			@media print {
-				@page { margin: 10mm; }
-				body { background: #fff; }
-				#wrapper { width: auto; max-width: none; }
-				#wrapper > header, #wrapper > nav, #wrapper > footer, .screen-only { display: none !important; }
-				.report-page, .report-sheet { max-width: none; margin: 0; padding: 0; }
+						@media print {
+				@page { margin: 0; }
+				html, body { background: #fff !important; margin: 0 !important; padding: 0 !important; height: auto !important; min-height: 0 !important; }
+				#wrapper { display: block !important; box-sizing: border-box; width: 100% !important; max-width: none; height: auto !important; min-height: 0 !important; padding: 10mm !important; margin: 0 !important; }
+				.app-side, .app-header, footer, .screen-only { display: none !important; }
+				.app-main { display: block !important; height: auto !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; }
+				.report-page, .report-sheet { max-width: none; margin: 0; padding: 0 !important; height: auto !important; min-height: 0 !important; }
 				.report-table { font-size: 9pt; }
+				.report-sheet { page-break-after: avoid; break-after: avoid; }
 			}
 		</style>
 		<script>

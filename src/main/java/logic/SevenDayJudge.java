@@ -2,7 +2,10 @@ package logic;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import bean.JudgeSummary;
 import bean.Shift;
@@ -12,24 +15,55 @@ import bean.Workplace;
 public class SevenDayJudge {
 
 
+	/**
+	 * judgeWindowメソッド 期間（7日間）の合計時間・勤務先別の時間・上限を判定する
+	 *
+	 * @param shifts:List<Shift> 学生のシフト
+	 * @param workplaces:List<Workplace> 学生の勤務先（勤務先別の名前を引くために使う）
+	 * @param from:LocalDate 期間の開始日（この日を含む）
+	 * @param to:LocalDate 期間の終了日（この日を含む）
+	 * @param policy:LimitPolicy 上限の決まり（長期休暇を含む）
+	 * @return 判定結果:WindowResult
+	 */
 	public WindowResult judgeWindow(List<Shift> shifts, List<Workplace> workplaces,
 			LocalDate from, LocalDate to, LimitPolicy policy) {
 		double total = 0;
+		// 勤務先の名前 → その7日間の時間（登録の順に並べる）
+		Map<String, Double> byWorkplace = new LinkedHashMap<>();
+
+		// 勤務先ID → 勤務先
+		Map<Integer, Workplace> workplaceMap = new HashMap<>();
+		if (workplaces != null) {
+			for (Workplace workplace : workplaces) {
+				workplaceMap.put(workplace.getId(), workplace);
+			}
+		}
 
 		if (shifts != null) {
 			for (Shift shift : shifts) {
 				LocalDate workDate = shift.getWorkDate();
 				// 期間内のシフトだけを足す
 				if (!workDate.isBefore(from) && !workDate.isAfter(to)) {
-					total += shift.getWorkHours();
+					double hours = shift.getWorkHours();
+					total += hours;
+
+					// 勤務先別にも足す（勤務先が見つからないときは、IDで区別する）
+					Workplace workplace = workplaceMap.get(shift.getWorkplaceId());
+					String name = (workplace != null) ? workplace.getDisplayName() : "勤務先" + shift.getWorkplaceId();
+					byWorkplace.merge(name, hours, Double::sum);
 				}
 			}
+		}
+
+		// 15分単位の端数が揃うよう、小数第2位で丸める
+		for (Map.Entry<String, Double> entry : byWorkplace.entrySet()) {
+			entry.setValue(Math.round(entry.getValue() * 100) / 100.0);
 		}
 
 		WindowResult result = new WindowResult();
 		result.setStartDate(from);
 		result.setEndDate(to);
-		// 15分単位の端数が揃うよう、小数第2位で丸める
+		result.setWorkplaceHours(byWorkplace);
 		result.setTotalHours(Math.round(total * 100) / 100.0);
 		result.setLimitHours(policy.getLimitHours(from, to));
 		return result;

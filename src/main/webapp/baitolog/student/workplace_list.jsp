@@ -334,8 +334,10 @@
 							</script>
 						</c:when>
 						<c:otherwise>
-							<div class="card border-0 shadow-sm">
-								<div class="card-body text-muted">左の勤務先カードを選ぶか、「＋ 追加」を押してください。</div>
+							<%-- 「＋ 追加」ボタンと同じ高さに、すぐ右へ表示する --%>
+							<div class="d-flex align-items-center text-muted"
+								style="min-height: calc(1.5 * .875rem + .5rem + 2px);">
+								左の勤務先カードを選ぶか、「＋ 追加」を押してください。
 							</div>
 						</c:otherwise>
 					</c:choose>

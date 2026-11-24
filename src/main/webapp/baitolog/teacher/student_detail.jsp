@@ -63,7 +63,7 @@
 
 	<c:param name="content">
 		<section class="me-4">
-			<h2 class="h4 mb-3 py-3 px-4 text-white" style="background:#0f2540;">
+						<h2 class="h4 mb-3 px-4">
 				<c:out value="${student.name}" /> ｜ <c:out value="${student.schoolClass.name}" default="（未所属）" /> ｜ 勤務先 ${workplaceCount} 社
 			</h2>
 
@@ -203,7 +203,7 @@
 						<div class="pop-icon" aria-hidden="true">!</div>
 						<div class="pop-title" id="resetPopupTitle">パスワードのリセット</div>
 						<p class="pop-text">
-							<strong><c:out value="${student.name}" />（<c:out value="${student.loginId}" />）</strong>のパスワードを、生年月日に戻します。よろしいですか？				
+							<strong><c:out value="${student.name}" />（<c:out value="${student.loginId}" />）</strong>のパスワードを、生年月日に戻します。よろしいですか？
 							<p class="small text-muted mb-2">
 								勤務先・シフトテンプレート・シフトなどのデータは消えません。学生は、生年月日でログインしたあと、新しいパスワードを登録し直します。
 							</p>
