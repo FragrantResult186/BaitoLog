@@ -8,6 +8,7 @@
 <c:import url="/common/base.jsp">
 <c:param name="title">シフト登録 | BaitoLog</c:param>
 <c:param name="scripts">
+<script src="${pageContext.request.contextPath}/js/holidays.js"></script>
 <script>
 // テンプレートデータ（勤務先ID → テンプレート配列）
 const templatesByWorkplace = {
@@ -262,9 +263,9 @@ document.addEventListener("DOMContentLoaded", () => {
 				<h4 class="mb-0">${monthLabel}</h4>
 				<div>
 					<a href="ShiftEdit.action?month=${prevMonth}"
-						class="btn btn-outline-secondary btn-sm">← 前月</a> <a
+						class="btn btn-outline-secondary btn-sm">＜</a> <a
 						href="ShiftEdit.action?month=${nextMonth}"
-						class="btn btn-outline-secondary btn-sm">翌月 →</a>
+						class="btn btn-outline-secondary btn-sm">＞</a>
 				</div>
 			</div>
 

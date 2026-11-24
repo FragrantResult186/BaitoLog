@@ -43,7 +43,7 @@
 				</table>
 			</div>
 
-			<p class="px-4 text-danger" role="alert">
+			<p class="px-4" style="color:#dc3545; font-weight:400;">
 				この学生のアカウントと、勤務先・シフトテンプレート・シフト・報告書などのデータをすべて削除します。<br>
 				この操作は取り消せません。削除したあと、この学生はログインできなくなります。
 			</p>

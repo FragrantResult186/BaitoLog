@@ -1,0 +1,537 @@
+@charset "UTF-8";
+
+/* =====================================================================
+   BaitoLog テーマ
+   ・色：パステルブルー ＋ 白 ＋ 濃紺の文字（背景は白に近いベージュ）
+   ・形：角は 2〜4px のシャープ。影は使わない
+   ・構成：箱（カード）は作らず、1枚の白い面の中を、余白と細い線で整理する
+   style.css のあとに読み込む（base.jsp）
+   ===================================================================== */
+
+/* =====================================================================
+   1. 色・形の変数
+   ===================================================================== */
+:root {
+  /* パステルブルー */
+  --bl-blue: #dcebfa;
+  --bl-blue-deep: #c4dcf5;
+  --bl-blue-mid: #8fbdeb;
+  --bl-blue-soft: #eef5fd;
+  --bl-accent: #a9cdf2;        /* ボタン・選択中 */
+  --bl-accent-deep: #8fbdeb;   /* ホバー・今日 */
+  --bl-blue-strong: #6aa5e3;   /* 注意（濃い青） */
+
+  /* 白・文字・線 */
+  --bl-page: #faf7f2;          /* ページの背景（白に近いベージュ） */
+  --bl-card: #ffffff;
+  --bl-ink: #25324b;           /* 文字（濃紺） */
+  --bl-ink-soft: #5d6c88;      /* 補助の文字 */
+  --bl-line: #dde6f1;          /* 薄い区切り線 */
+  --bl-border: #b9d0ea;        /* 枠線（青系） */
+
+  /* 形 */
+  --bl-radius: 3px;
+
+  /* Bootstrap の変数を上書き */
+  --bs-body-color: var(--bl-ink);
+  --bs-body-bg: var(--bl-page);
+  --bs-link-color: #2a5a96;
+  --bs-link-hover-color: #1d4474;
+  --bs-border-color: var(--bl-line);
+  --bs-border-radius: var(--bl-radius);
+}
+
+body {
+  font-family: "Noto Sans JP", "Hiragino Sans", "Meiryo", sans-serif;
+  background: var(--bl-page);
+  color: var(--bl-ink);
+  line-height: 1.7;
+}
+.text-muted { color: var(--bl-ink-soft) !important; }
+
+.btn, .nav-link, a, tr[onclick], .shift-item, .cal-nav {
+  transition: background-color .2s ease, color .2s ease, border-color .2s ease, transform .2s ease;
+}
+
+/* =====================================================================
+   2. 全体のレイアウト
+   （ログイン後：左サイドバー ＋ 右にヘッダー・中身・フッター。
+     ヘッダーと中身は、左右の端を完全に同じにする）
+   ===================================================================== */
+body.app-auth #wrapper {
+  max-width: 1500px;
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+  padding: 24px;
+}
+body.app-guest #wrapper { max-width: 960px; padding: 24px 16px; }
+
+.app-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+body.app-guest .app-main { width: 100%; }
+
+body.app-auth .app-main {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  min-height: calc(100vh - 48px);
+}
+
+/* Bootstrap の .row / .col の余白を消して、ヘッダーと同じ幅にする */
+body.app-auth .app-main > .row {
+  --bs-gutter-x: 0;
+  flex: 1 1 auto;
+  margin-left: 0;
+  margin-right: 0;
+  align-items: stretch;
+}
+body.app-auth .app-main > .row > main {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 100%;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+/* 画面ごとの container が幅を狭めないようにする */
+.app-main main .container,
+.app-main main .container-fluid,
+.app-main main .container-sm,
+.app-main main .container-md,
+.app-main main .container-lg {
+  max-width: 100%;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* =====================================================================
+   3. サイドバー
+   ===================================================================== */
+.app-side {
+  position: sticky;
+  top: 24px;
+  flex: 0 0 100px;
+  width: 100px;
+  padding: 18px 8px;
+  background: var(--bl-card);
+  border: 1px solid var(--bl-border);
+  border-radius: var(--bl-radius);
+}
+.app-logo {
+  display: block;
+  width: 64px;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto 18px;
+  object-fit: contain;
+  background: transparent;
+  pointer-events: none;
+  user-select: none;
+}
+.app-nav { margin: 0 !important; }
+.app-tabs { flex-direction: column; gap: 6px; border: 0; }
+.app-tabs .nav-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: .65rem .25rem;
+  border: 0;
+  border-radius: var(--bl-radius);
+  background: transparent;
+  color: var(--bl-ink);
+  font-size: .72rem;
+  line-height: 1.3;
+  text-align: center;
+}
+.app-tabs .nav-link .bi { font-size: 1.35rem; }
+.app-tabs .nav-link:hover { background: var(--bl-blue-soft); color: var(--bl-ink); }
+.app-tabs .nav-link.active {
+  background: var(--bl-accent);
+  color: var(--bl-ink);
+  font-weight: 700;
+  border: 1px solid var(--bl-blue-mid);
+}
+
+/* =====================================================================
+   4. ヘッダー・フッター（箱にせず、線だけ）
+   ===================================================================== */
+.app-header {
+  margin-bottom: 24px;
+  padding: .8rem 0;
+  background: transparent;
+  color: var(--bl-ink);
+  border: 0;
+  border-bottom: 1px solid var(--bl-border);
+  border-radius: 0;
+}
+.app-brand {
+  color: var(--bl-ink);
+  font-family: "Poppins", "Noto Sans JP", sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+  line-height: 1.2;
+  text-decoration: none;
+}
+.app-user { display: flex; align-items: center; gap: .6rem; color: var(--bl-ink); font-size: .9rem; }
+.app-avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--bl-radius);
+  background: var(--bl-accent);
+  color: var(--bl-ink);
+  font-weight: 700;
+}
+.app-user a {
+  margin-left: .4rem;
+  padding: .25rem .8rem;
+  border-radius: var(--bl-radius);
+  background: var(--bl-blue);
+  color: var(--bl-ink);
+  text-decoration: none;
+  font-size: .8rem;
+}
+.app-user a:hover { background: var(--bl-blue-deep); color: var(--bl-ink); text-decoration: none; }
+
+.app-main footer {
+  flex: 0 0 auto;
+  margin: 16px 0 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  color: var(--bl-ink-soft);
+}
+
+/* =====================================================================
+   5. 画面の中身：1枚の白い面（箱は作らない）
+   ===================================================================== */
+.app-main main > section {
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 1.75rem 2rem;
+  box-sizing: border-box;
+  background: var(--bl-card);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* 個別の箱（カード・枠・影・灰色の帯）は、すべてなくす */
+.card, .list-group, .list-group-item,
+.app-main .border, .app-main .shadow, .app-main .shadow-sm, .app-main .shadow-lg,
+.app-main .bg-white, .app-main .bg-light, .app-main .bg-body-secondary, .app-main .rounded {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.card-header, .card-footer { background: transparent; border: 0; border-radius: 0 !important; padding-left: 0; padding-right: 0; }
+.card-body { padding-left: 0; padding-right: 0; }
+.list-group-item { padding-left: 0; padding-right: 0; border-bottom: 1px solid var(--bl-line) !important; }
+.list-group-item:last-child { border-bottom: 0 !important; }
+
+/* 見出し：下線だけ */
+.app-main main h2 {
+  margin-bottom: 1rem;
+  padding: 0 0 .6rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  background: transparent !important;
+  border-bottom: 1px solid var(--bl-border);
+}
+
+/* =====================================================================
+   6. ホーム（左：本文 ／ 右：カレンダーとシフト予定）
+   ===================================================================== */
+.app-main main > section.dash { display: flex; flex-direction: column; }
+
+.dash-layout {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 0;
+  align-items: stretch;
+}
+
+/* 左 */
+.board { display: flex; flex-direction: column; min-width: 0; padding: 0 2rem 0 0; }
+.board-period { margin: 0 0 .4rem; text-align: center; font-size: 1.1rem; color: var(--bl-ink-soft); }
+.board-total { margin: 0 0 .8rem; text-align: center; font-size: 2.4rem; font-weight: 700; line-height: 1.3; }
+.board .progress { margin-bottom: 1rem; }
+.board-message {
+  margin: 0;
+  padding: .2rem 0 .2rem 1rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  border-left: 3px solid var(--bl-blue-mid);
+}
+.board-section, .side-section { margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--bl-line); }
+.board-title { margin: 0 0 .7rem; font-size: 1rem; font-weight: 700; }
+.section-title { margin: 0; font-size: 1.05rem; font-weight: 700; }
+
+.workplace-list { margin: 0; padding: 0; list-style: none; }
+.workplace-list li { padding: .25rem 0; border-bottom: 1px dashed var(--bl-line); font-size: .95rem; }
+.workplace-list li:last-child { border-bottom: 0; }
+
+/* 進捗バー（薄い青＝余裕 / 濃い青＝注意 / 濃紺＝超過） */
+.progress { height: 1rem !important; background: var(--bl-blue); border-radius: var(--bl-radius); }
+.progress-bar { border-radius: var(--bl-radius); }
+.progress-bar.bg-success { background-color: var(--bl-blue-mid) !important; }
+.progress-bar.bg-warning { background-color: var(--bl-blue-strong) !important; }
+.progress-bar.bg-danger  { background-color: var(--bl-ink) !important; }
+
+/* 右：縦の細い線で本文と分ける */
+.side-panel { align-self: start; padding: 0 0 0 2rem; border-left: 1px solid var(--bl-line); }
+.side-section { margin-top: 1.25rem; padding-top: 1.1rem; }
+
+/* カレンダー */
+.cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: .8rem; }
+.cal-title { margin: 0; font-size: 1.05rem; font-weight: 700; }
+.cal-nav {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: var(--bl-radius);
+  background: var(--bl-blue);
+  color: var(--bl-ink);
+}
+.cal-nav:hover { background: var(--bl-blue-deep); }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px 2px; text-align: center; }
+.cal-dow { padding-bottom: .3rem; color: var(--bl-ink-soft); font-size: .72rem; }
+.cal-day {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 38px;
+  border-radius: var(--bl-radius);
+  font-size: .85rem;
+}
+.cal-day.is-empty { visibility: hidden; }
+.cal-day.has-shift { background: transparent; font-weight: 400; }
+.cal-day.has-shift::after {
+  content: "";
+  position: absolute;
+  bottom: 4px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--bl-ink);
+}
+.cal-day.is-today { background: var(--bl-accent-deep); font-weight: 700; outline: 1px solid #78aee6; }
+.cal-legend { display: flex; gap: 1rem; margin: .8rem 0 0; color: var(--bl-ink-soft); font-size: .75rem; }
+.cal-legend i { display: inline-block; width: 12px; height: 12px; margin-right: .3rem; border-radius: 2px; vertical-align: -1px; }
+.cal-legend .lg-today { background: var(--bl-accent-deep); }
+.cal-legend .lg-shift { width: 5px; height: 5px; margin: 0 .5rem 0 .2rem; border-radius: 50%; background: var(--bl-ink); vertical-align: middle; }
+
+/* 今月のシフト予定：線で区切った一覧 */
+.shift-list { margin: .9rem 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; }
+.shift-item {
+  display: flex;
+  align-items: center;
+  gap: .8rem;
+  padding: .7rem 0;
+  background: transparent;
+  border-bottom: 1px solid var(--bl-line);
+  color: var(--bl-ink);
+  text-decoration: none;
+}
+.shift-list li:last-child .shift-item { border-bottom: 0; }
+.shift-item:hover { color: var(--bl-ink); }
+.shift-item:hover .shift-place { text-decoration: underline; }
+.shift-date { flex: 0 0 auto; min-width: 48px; font-size: .8rem; font-weight: 700; line-height: 1.3; }
+.shift-date small { display: block; font-weight: 400; color: var(--bl-ink-soft); }
+.shift-info { min-width: 0; font-size: .85rem; line-height: 1.4; }
+.shift-place { display: block; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shift-time { color: var(--bl-ink-soft); }
+.shift-badge {
+  margin-left: auto;
+  padding: .1rem .55rem;
+  border-radius: var(--bl-radius);
+  background: var(--bl-accent);
+  font-size: .7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* =====================================================================
+   7. 部品（ボタン・入力欄・メッセージ・表）
+   ===================================================================== */
+.btn { border-radius: var(--bl-radius); font-weight: 500; }
+.btn:hover { transform: translateY(-1px); }
+
+/* 主ボタン＝青 */
+.btn-primary, .btn-warning {
+  --bs-btn-color: var(--bl-ink);  --bs-btn-bg: var(--bl-accent);  --bs-btn-border-color: var(--bl-accent);
+  --bs-btn-hover-color: var(--bl-ink);  --bs-btn-hover-bg: var(--bl-accent-deep);  --bs-btn-hover-border-color: var(--bl-accent-deep);
+  --bs-btn-active-color: var(--bl-ink); --bs-btn-active-bg: #78aee6; --bs-btn-active-border-color: #78aee6;
+  --bs-btn-disabled-color: var(--bl-ink-soft); --bs-btn-disabled-bg: var(--bl-blue-soft); --bs-btn-disabled-border-color: var(--bl-blue-soft);
+  --bs-btn-focus-shadow-rgb: 143, 189, 235;
+}
+/* 副ボタン＝薄い青 */
+.btn-success, .btn-secondary, .btn-info {
+  --bs-btn-color: var(--bl-ink);  --bs-btn-bg: var(--bl-blue-deep);  --bs-btn-border-color: var(--bl-blue-deep);
+  --bs-btn-hover-color: var(--bl-ink);  --bs-btn-hover-bg: var(--bl-blue-mid);  --bs-btn-hover-border-color: var(--bl-blue-mid);
+  --bs-btn-active-color: var(--bl-ink); --bs-btn-active-bg: var(--bl-blue-mid); --bs-btn-active-border-color: var(--bl-blue-mid);
+  --bs-btn-focus-shadow-rgb: 143, 189, 235;
+}
+/* 削除などの注意ボタン＝濃紺（色は増やさない） */
+.btn-danger {
+  --bs-btn-color: #fff;  --bs-btn-bg: var(--bl-ink);  --bs-btn-border-color: var(--bl-ink);
+  --bs-btn-hover-color: #fff;  --bs-btn-hover-bg: #38486b;  --bs-btn-hover-border-color: #38486b;
+  --bs-btn-active-color: #fff; --bs-btn-active-bg: #1b263b; --bs-btn-active-border-color: #1b263b;
+}
+.btn-outline-primary, .btn-outline-secondary, .btn-outline-success, .btn-outline-warning, .btn-outline-info {
+  --bs-btn-color: var(--bl-ink);  --bs-btn-border-color: var(--bl-blue-mid);
+  --bs-btn-hover-color: var(--bl-ink);  --bs-btn-hover-bg: var(--bl-blue);  --bs-btn-hover-border-color: var(--bl-blue-mid);
+  --bs-btn-active-color: var(--bl-ink); --bs-btn-active-bg: var(--bl-blue-deep); --bs-btn-active-border-color: var(--bl-blue-mid);
+}
+.btn-outline-danger {
+  --bs-btn-color: var(--bl-ink);  --bs-btn-border-color: var(--bl-ink);
+  --bs-btn-hover-color: #fff;  --bs-btn-hover-bg: var(--bl-ink);  --bs-btn-hover-border-color: var(--bl-ink);
+  --bs-btn-active-color: #fff; --bs-btn-active-bg: var(--bl-ink); --bs-btn-active-border-color: var(--bl-ink);
+}
+
+/* 入力欄（操作する部品なので、細い枠は残す） */
+.form-control, .form-select {
+  border: 1px solid #c9d9ec;
+  border-radius: var(--bl-radius);
+  background-color: #fff;
+  color: var(--bl-ink);
+}
+.form-control:focus, .form-select:focus {
+  border-color: var(--bl-blue-mid);
+  box-shadow: 0 0 0 .22rem rgba(143, 189, 235, .35);
+}
+.form-check-input:checked { background-color: var(--bl-ink); border-color: var(--bl-ink); }
+
+/* メッセージ：背景なし。左の線で区別（青＝通常・注意 / 濃紺＝エラー） */
+.alert {
+  padding: .5rem 0 .5rem 1rem;
+  color: var(--bl-ink);
+  background: transparent !important;
+  border: 0;
+  border-left: 3px solid var(--bl-blue-mid);
+  border-radius: 0;
+}
+.alert-danger { border-left-color: var(--bl-ink); font-weight: 700; }
+
+/* 表：外枠・背景なし。行の下線だけ（機能はそのまま） */
+.table {
+  --bs-table-bg: transparent;
+  --bs-table-hover-bg: var(--bl-blue-soft);
+  --bs-table-border-color: var(--bl-line);
+  color: var(--bl-ink);
+}
+.table thead th {
+  background: transparent;
+  color: var(--bl-ink-soft);
+  font-weight: 500;
+  border-bottom: 1px solid var(--bl-border);
+  border-radius: 0 !important;
+}
+.table-bordered > :not(caption) > * > * { border-width: 0 0 1px 0; }
+.table-responsive { border: 0; }
+
+/* シフト登録のカレンダー（style.css の色を上書き。マスの罫線は残す） */
+.calendar-table.table-bordered > :not(caption) > * > * { border: 1px solid var(--bl-line); }
+.calendar-table td.selected-day { background-color: var(--bl-accent) !important; }
+.calendar-table td.calendar-day:hover { background-color: var(--bl-blue); }
+
+/* 学生一覧の状態：色ではなく、濃さ・太さで区別する */
+.status-over    { background: var(--bl-ink); color: #fff !important; font-weight: 700; padding: .1rem .6rem; border-radius: var(--bl-radius); }
+.status-caution { background: var(--bl-blue-strong); color: var(--bl-ink) !important; font-weight: 700; padding: .1rem .6rem; border-radius: var(--bl-radius); }
+.status-ok      { background: var(--bl-blue-deep); color: var(--bl-ink) !important; padding: .1rem .6rem; border-radius: var(--bl-radius); }
+
+/* =====================================================================
+   カレンダーの色（シフト登録 ShiftEdit・ダッシュボード StudentTop 共通）
+   土＝青 ／ 日＝赤 ／ 祝日＝緑（土日と重なったときは祝日を優先）
+   曜日の見出し＝ベビーブルー
+   ===================================================================== */
+:root {
+  --bl-baby: #c9e4fa;          /* 曜日の見出し（ベビーブルー） */
+  --bl-sat: #1f5fc0;           /* 土：青 */
+  --bl-sat-bg: #e6effc;
+  --bl-sun: #c0392b;           /* 日：赤 */
+  --bl-sun-bg: #fdecea;
+  --bl-hol: #167a52;           /* 祝日：緑 */
+  --bl-hol-bg: #e1f4ea;
+}
+
+/* 曜日の見出し（月〜日） */
+.calendar-table.table thead th {
+  background: var(--bl-baby);
+  color: var(--bl-ink);
+  font-weight: 700;
+  border-bottom: 1px solid var(--bl-blue-mid);
+}
+.calendar-table.table thead th:nth-child(6) { color: var(--bl-sat); }
+.calendar-table.table thead th:nth-child(7) { color: var(--bl-sun); }
+.cal-dow {
+  padding: .35rem 0;
+  background: var(--bl-baby);
+  color: var(--bl-ink);
+  font-size: .75rem;
+  font-weight: 700;
+}
+.cal-dow.is-sat { color: var(--bl-sat); }
+.cal-dow.is-sun { color: var(--bl-sun); }
+
+/* 日付：シフト登録（表） */
+.calendar-table td.day-sat { background-color: var(--bl-sat-bg); }
+.calendar-table td.day-sun { background-color: var(--bl-sun-bg); }
+.calendar-table td.day-holiday { background-color: var(--bl-hol-bg); }
+.calendar-table td.day-sat .day-number { color: var(--bl-sat); }
+.calendar-table td.day-sun .day-number { color: var(--bl-sun); }
+.calendar-table td.day-holiday .day-number { color: var(--bl-hol); }
+
+/* 日付：ダッシュボード（土日祝は数字の色だけ。背景なし） */
+.cal-day.day-sat { color: var(--bl-sat); }
+.cal-day.day-sun { color: var(--bl-sun); }
+.cal-day.day-holiday { color: var(--bl-hol); }
+.cal-day.is-today { color: var(--bl-ink); }
+
+/* 進捗バー：26時間以上（上限28時間の間近）と、超過は赤 */
+.progress-bar.bar-red { background-color: #dc3545 !important; }
+/* =====================================================================
+   8. レスポンシブ
+   ===================================================================== */
+@media (max-width: 1199.98px) {
+  .dash-layout { grid-template-columns: minmax(0, 1fr); }
+  .board { padding: 0; }
+  .side-panel {
+    align-self: stretch;
+    margin-top: 1.5rem;
+    padding: 1.5rem 0 0;
+    border-left: 0;
+    border-top: 1px solid var(--bl-line);
+  }
+}
+@media (max-width: 991.98px) {
+  body.app-auth #wrapper { flex-direction: column; gap: 16px; padding: 16px; }
+  body.app-auth .app-main { min-height: 0; }
+  .app-side { position: static; flex: 0 0 auto; width: 100%; padding: 8px; }
+  .app-logo { display: none; }
+  .app-tabs { flex-direction: row; gap: 4px; }
+  .app-tabs .nav-item { flex: 1 1 0; }
+  .app-header { margin-bottom: 16px; padding: .7rem 0; }
+}
+@media (max-width: 575.98px) {
+  .app-main main > section { padding: 1.1rem; }
+  .board-total { font-size: 2rem; }
+  .app-user-name { display: none; }
+}
